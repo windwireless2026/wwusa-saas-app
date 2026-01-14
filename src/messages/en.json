@@ -25,7 +25,7 @@
     "p1": "WindWireless is not just a distributor. We are your eyes in the United States. Our operation has an active Resale Certificate in Florida, allowing exclusive access to the country's largest electronics auctions.",
     "p2": "Each device undergoes a rigorous screening process. We work exclusively with Grades A and B, ensuring that the product arriving on your shelf is ready to delight your end customer, minimizing RMAs and maximizing your margin.",
     "list1": "Individual technical inspection",
-    "list2": "Integrated logistics for Brazil",
+    "list2": "Specialized logistics support",
     "list3": "Active and humanized after-sales support"
   },
   "Products": {
@@ -415,5 +415,27 @@
         "actions": "Actions"
       }
     }
+  },
+  "Terms": {
+    "title": "Terms of Use",
+    "lastUpdated": "Last updated: January 13, 2026",
+    "intro": "Welcome to WindWireless. By accessing our website and using our services, you agree to comply with these terms.",
+    "section1Title": "1. Use of Service",
+    "section1Content": "Our services are intended for retailers and resellers (B2B). We reserve the right to refuse service to anyone for any reason at any time.",
+    "section2Title": "2. Prices and Products",
+    "section2Content": "Prices for our products are subject to change without notice. As we deal with auctions, availability is limited to current stock.",
+    "section3Title": "3. Intellectual Property",
+    "section3Content": "All content included in or made available through the site, such as text, graphics, logos, and images, is the property of WindWireless or its content suppliers."
+  },
+  "Privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: January 13, 2026",
+    "intro": "At WindWireless, your privacy is our priority. This policy describes how we collect and use your data.",
+    "section1Title": "1. Data Collection",
+    "section1Content": "We collect information necessary for order processing and commercial communication, such as name, email, and company details.",
+    "section2Title": "2. Information Use",
+    "section2Content": "Your information will never be sold to third parties. It is used exclusively to manage your account and improve our services.",
+    "section3Title": "3. Security",
+    "section3Content": "We implement technical and organizational security measures to protect your data against unauthorized access."
   }
 }

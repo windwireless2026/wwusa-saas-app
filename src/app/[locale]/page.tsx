@@ -12,7 +12,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   const tProducts = await getTranslations('Products');
   const tContact = await getTranslations('Contact');
 
-  const whatsappLink = "https://wa.me/17869634734"; // Placeholder number
+  const whatsappLink = "https://wa.me/17866741720"; // Updated to user's number
 
   return (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#ffffff' }}>

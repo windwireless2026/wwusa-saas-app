@@ -25,7 +25,7 @@
     "p1": "A WindWireless não é apenas uma distribuidora. Somos seus olhos nos Estados Unidos. Nossa operação possui Resale Certificate ativo na Flórida, permitindo acesso exclusivo aos maiores leilões de eletrônicos do país.",
     "p2": "Cada dispositivo passa por um rigoroso processo de triagem. Trabalhamos exclusivamente com Grades A e B, garantindo que o produto que chega na sua prateleira esteja pronto para encantar seu cliente final, minimizando RMAs e maximizando sua margem.",
     "list1": "Inspeção técnica individual",
-    "list2": "Logística integrada para o Brasil",
+    "list2": "Suporte logístico especializado",
     "list3": "Pós-venda ativo e humanizado"
   },
   "Products": {
@@ -525,5 +525,27 @@
         }
       }
     }
+  },
+  "Terms": {
+    "title": "Termos de Uso",
+    "lastUpdated": "Última atualização: 13 de Janeiro, 2026",
+    "intro": "Bem-vindo à WindWireless. Ao acessar nosso site e utilizar nossos serviços, você concorda em cumprir estes termos.",
+    "section1Title": "1. Uso do Serviço",
+    "section1Content": "Nossos serviços são destinados a lojistas e revendedores (B2B). Reservamos o direito de recusar serviço a qualquer pessoa por qualquer motivo a qualquer momento.",
+    "section2Title": "2. Preços e Produtos",
+    "section2Content": "Os preços dos nossos produtos estão sujeitos a alterações sem aviso prévio. Como lidamos com leilões, a disponibilidade é limitada ao estoque atual.",
+    "section3Title": "3. Propriedade Intelectual",
+    "section3Content": "Todo o conteúdo incluído ou disponibilizado através do site, como textos, gráficos, logotipos e imagens, é de propriedade da WindWireless ou de seus fornecedores de conteúdo."
+  },
+  "Privacy": {
+    "title": "Política de Privacidade",
+    "lastUpdated": "Última atualização: 13 de Janeiro, 2026",
+    "intro": "Na WindWireless, a sua privacidade é nossa prioridade. Esta política descreve como coletamos e usamos seus dados.",
+    "section1Title": "1. Coleta de Dados",
+    "section1Content": "Coletamos informações necessárias para o processamento de pedidos e comunicação comercial, como nome, e-mail e dados da empresa.",
+    "section2Title": "2. Uso de Informações",
+    "section2Content": "Suas informações nunca serão vendidas a terceiros. Elas são usadas exclusivamente para gerenciar sua conta e melhorar nossos serviços.",
+    "section3Title": "3. Segurança",
+    "section3Content": "Implementamos medidas de segurança técnicas e organizacionais para proteger seus dados contra acesso não autorizado."
   }
 }

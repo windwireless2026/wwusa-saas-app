@@ -61,8 +61,8 @@ export default function Footer() {
             <p style={{ color: '#94a3b8', fontSize: '15px', marginBottom: '12px' }}>
               Miami, FL - USA
             </p>
-            <a href="https://wa.me/17869634734" target="_blank" rel="noopener noreferrer" style={{ color: '#25d366', fontSize: '15px', textDecoration: 'none', fontWeight: '700' }}>
-              WhatsApp: +1 (786) 963-4734
+            <a href="https://wa.me/17866741720" target="_blank" rel="noopener noreferrer" style={{ color: '#25d366', fontSize: '15px', textDecoration: 'none', fontWeight: '700' }}>
+              WhatsApp: +1 (786) 674-1720
             </a>
           </div>
         </div>
