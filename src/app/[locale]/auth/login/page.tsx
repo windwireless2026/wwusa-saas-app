@@ -204,21 +204,6 @@ export default function LoginPage() {
           )}
         </form>
 
-        <div
-          style={{
-            marginTop: '32px',
-            textAlign: 'center',
-            borderTop: '1px solid var(--border-subtle)',
-            paddingTop: '24px',
-          }}
-        >
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-            Ainda não é parceiro?{' '}
-            <Link href="/auth/register" style={{ color: 'var(--color-accent)', fontWeight: '600' }}>
-              Solicitar acesso
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );

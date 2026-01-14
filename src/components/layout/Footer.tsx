@@ -2,8 +2,9 @@
 
 import { useTranslations } from 'next-intl';
 
-export default function Footer() {
+export default function Footer({ locale }: { locale?: string }) {
   const t = useTranslations('Footer');
+  const langPrefix = locale ? `/${locale}` : '';
 
   return (
     <footer
@@ -24,8 +25,8 @@ export default function Footer() {
           }}
         >
           <div>
-            <h3 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '24px', letterSpacing: '-1px' }}>
-              WindWireless
+            <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '24px', letterSpacing: '-0.5px' }}>
+              WIND WIRELESS ENTERPRISES LLC
             </h3>
             <p style={{ color: '#94a3b8', lineHeight: '1.7', fontSize: '15px', maxWidth: '300px' }}>
               {t('description')}
@@ -35,10 +36,10 @@ export default function Footer() {
           <div>
             <h4 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '24px', color: 'white', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('company')}</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <a href="#about" style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
+              <a href={`${langPrefix}#about`} style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
                 Sobre nós
               </a>
-              <a href="#products" style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
+              <a href={`${langPrefix}#products`} style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
                 Nossos Produtos
               </a>
             </div>
@@ -47,10 +48,10 @@ export default function Footer() {
           <div>
             <h4 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '24px', color: 'white', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('support')}</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <a href="/terms" style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
+              <a href={`${langPrefix}/terms`} style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
                 Termos de Uso
               </a>
-              <a href="/privacy" style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
+              <a href={`${langPrefix}/privacy`} style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
                 Privacidade
               </a>
             </div>

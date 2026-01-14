@@ -55,19 +55,19 @@ export default function Header({ locale }: { locale: string }) {
 
         <nav style={{ display: 'flex', gap: '40px', alignItems: 'center' }}>
           <Link
-            href="#about"
+            href={`/${locale}#about`}
             style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '1px' }}
           >
             {t('about')}
           </Link>
           <Link
-            href="#products"
+            href={`/${locale}#products`}
             style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '1px' }}
           >
             {t('products')}
           </Link>
           <Link
-            href="#contact"
+            href={`/${locale}#contact`}
             style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '1px' }}
           >
             {t('contact')}

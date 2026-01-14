@@ -39,7 +39,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             </section>
 
             <div style={{ marginTop: 'auto', background: '#0f172a' }}>
-                <Footer />
+                <Footer locale={locale} />
             </div>
         </main>
     );

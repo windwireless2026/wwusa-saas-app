@@ -211,7 +211,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       </section>
 
       <div style={{ background: '#0f172a' }}>
-        <Footer />
+        <Footer locale={locale} />
       </div>
     </main>
   );
