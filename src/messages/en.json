@@ -6,13 +6,13 @@
     "login": "Login"
   },
   "Hero": {
-    "badge": "Direct From USA Auctions",
+    "badge": "DIRECT FROM US AUCTIONS",
     "titlePrefix": "The definitive source of",
     "titleHighlight": "Premium iPhones",
     "titleSuffix": "for your business",
-    "description": "Buy Grade A and B iPhones directly from US auctions with certification and guaranteed origin. Stock your store with the best prices in the global market.",
-    "ctaPrimary": "Start Now",
-    "ctaSecondary": "How it works"
+    "description": "Stock your store with Grade A and B iPhones directly from the largest US auctions. Guaranteed provenance, technical certification, and the best prices in the global market.",
+    "ctaPrimary": "Contact Us",
+    "ctaSecondary": "Our Products"
   },
   "Stats": {
     "sold": "Devices sold",
@@ -28,10 +28,26 @@
     "list2": "Integrated logistics for Brazil",
     "list3": "Active and humanized after-sales support"
   },
-  "CTA": {
-    "title": "Ready to scale your inventory?",
-    "description": "Join the select group of retailers buying at US wholesale prices with total security.",
-    "button": "Request Access"
+  "Products": {
+    "title": "Uncompromising Quality",
+    "subtitle": "Our Apple Lineup",
+    "description": "We work exclusively with the Apple ecosystem, focusing on models that guarantee fast turnover and end-customer satisfaction. Our rigorous curation ensures each device exceeds used market expectations.",
+    "item1Title": "Selected Grades",
+    "item1Desc": "Exclusive focus on Grades A and B. No deep dents or screen scratches that compromise resale.",
+    "item2Title": "Legal Provenance",
+    "item2Desc": "All products come with an invoice and traceable origin from official US auctions.",
+    "item3Title": "Hardware Testing",
+    "item3Desc": "Battery, Face ID, Display, and connectivity. Everything validated by our technical team in Miami."
+  },
+  "Contact": {
+    "title": "Talk to our experts",
+    "subtitle": "Ready to stock your store?",
+    "whatsappText": "Contact on WhatsApp",
+    "formTitle": "Send a message",
+    "name": "Your Name",
+    "email": "Your E-mail",
+    "message": "How can we help?",
+    "send": "Send Message"
   },
   "Footer": {
     "description": "Connecting the US used iPhone market to the largest retailers in Brazil. Quality, origin, and efficient logistics.",

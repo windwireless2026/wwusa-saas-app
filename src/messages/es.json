@@ -6,13 +6,13 @@
     "login": "Acceso"
   },
   "Hero": {
-    "badge": "Directo de Subastas de EE.UU.",
+    "badge": "DIRECTO DE SUBASTAS DE EE.UU.",
     "titlePrefix": "La fuente definitiva de",
     "titleHighlight": "iPhones Premium",
     "titleSuffix": "para su negocio",
-    "description": "Compre iPhones Grado A y B directamente de subastas americanas con certificación y procedencia garantizada. Abastezca su tienda con los mejores precios del mercado global.",
-    "ctaPrimary": "Empezar ahora",
-    "ctaSecondary": "Cómo funciona"
+    "description": "Abastezca su tienda con iPhones Grado A y B directamente de las mayores subastas americanas. Procedencia garantizada, certificación técnica y los mejores precios del mercado global.",
+    "ctaPrimary": "Contáctanos",
+    "ctaSecondary": "Nuestros Productos"
   },
   "Stats": {
     "sold": "Dispositivos vendidos",
@@ -28,10 +28,26 @@
     "list2": "Logística integrada para Brasil",
     "list3": "Posventa activa y humanizada"
   },
-  "CTA": {
-    "title": "¿Listo para escalar su inventario?",
-    "description": "Únase al grupo selecto de minoristas que compran a precios de mayorista americano y seguridad total.",
-    "button": "Solicitar Acceso"
+  "Products": {
+    "title": "Calidad sin concesiones",
+    "subtitle": "Nuestra línea Apple",
+    "description": "Trabajamos exclusivamente con el ecosistema Apple, enfocándonos en modelos que garantizan una rotación rápida y la satisfacción del cliente final. Nuestra curaduría rigurosa asegura que cada dispositivo supere las expectativas del mercado de usados.",
+    "item1Title": "Grados Seleccionados",
+    "item1Desc": "Foco exclusivo en Grados A y B. Sin abolladuras profundas ni arañazos en la pantalla que comprometan la reventa.",
+    "item2Title": "Procedencia Legal",
+    "item2Desc": "Todos los productos vienen con factura y origen rastreable de subastas oficiales estadounidenses.",
+    "item3Title": "Pruebas de Hardware",
+    "item3Desc": "Batería, Face ID, Display y conectividad. Todo validado por nuestro equipo técnico en Miami."
+  },
+  "Contact": {
+    "title": "Hable con nuestros expertos",
+    "subtitle": "¿Listo para abastecer su tienda?",
+    "whatsappText": "Contactar por WhatsApp",
+    "formTitle": "Envíe un mensaje",
+    "name": "Su Nombre",
+    "email": "Su Correo",
+    "message": "¿Cómo podemos ayudar?",
+    "send": "Enviar Mensaje"
   },
   "Footer": {
     "description": "Conectando el mercado de iPhones usados de EE.UU. a los mayores minoristas de Brasil. Calidad, procedencia y logística eficiente.",

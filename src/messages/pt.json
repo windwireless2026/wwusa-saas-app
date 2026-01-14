@@ -6,13 +6,13 @@
     "login": "Login"
   },
   "Hero": {
-    "badge": "Direto dos Leilões dos EUA",
+    "badge": "DIRETO DOS LEILÕES DOS EUA",
     "titlePrefix": "A fonte definitiva de",
     "titleHighlight": "iPhones Premium",
     "titleSuffix": "para o seu negócio",
-    "description": "Compre iPhones Grade A e B diretamente de leilões americanos com certificação e procedência garantida. Abasteça sua loja com os melhores preços do mercado global.",
-    "ctaPrimary": "Começar agora",
-    "ctaSecondary": "Como funciona"
+    "description": "Abasteça sua loja com iPhones Grade A e B diretamente dos maiores leilões americanos. Procedência garantida, certificação técnica e os melhores preços do mercado global.",
+    "ctaPrimary": "Entre em contato",
+    "ctaSecondary": "Nossos Produtos"
   },
   "Stats": {
     "sold": "Aparelhos vendidos",
@@ -28,10 +28,26 @@
     "list2": "Logística integrada para o Brasil",
     "list3": "Pós-venda ativo e humanizado"
   },
-  "CTA": {
-    "title": "Pronto para escalar seu estoque?",
-    "description": "Junte-se ao grupo seleto de lojistas que compram com preço de atacado americano e segurança total.",
-    "button": "Solicitar Acesso"
+  "Products": {
+    "title": "Qualidade sem concessões",
+    "subtitle": "Nossa linha Apple",
+    "description": "Trabalhamos exclusivamente com o ecossistema Apple, focando em modelos que garantem giro rápido e satisfação do cliente final. Nossa curadoria rigorosa garante que cada aparelho supere as expectativas do mercado de usados.",
+    "item1Title": "Grades Selecionadas",
+    "item1Desc": "Foco exclusivo em Grades A e B. Sem amassados profundos ou riscos na tela que comprometam a revenda.",
+    "item2Title": "Procedência Legal",
+    "item2Desc": "Todos os produtos possuem invoice e origem rastreável de leilões oficiais americanos.",
+    "item3Title": "Testes de Hardware",
+    "item3Desc": "Bateria, Face ID, Display e conectividade. Tudo validado por nossa equipe técnica em Miami."
+  },
+  "Contact": {
+    "title": "Fale com nossos especialistas",
+    "subtitle": "Pronto para abastecer sua loja?",
+    "whatsappText": "Chamar no WhatsApp",
+    "formTitle": "Envie uma mensagem",
+    "name": "Seu Nome",
+    "email": "Seu E-mail",
+    "message": "Como podemos ajudar?",
+    "send": "Enviar Mensagem"
   },
   "Footer": {
     "description": "Conectando o mercado americano de iPhones usados aos maiores lojistas do Brasil. Qualidade, procedência e logística eficiente.",

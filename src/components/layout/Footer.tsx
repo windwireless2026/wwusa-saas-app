@@ -1,85 +1,87 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+
 export default function Footer() {
+  const t = useTranslations('Footer');
+
   return (
     <footer
       style={{
-        background: 'var(--bg-secondary)',
-        borderTop: '1px solid var(--border-subtle)',
-        padding: '64px 0 32px',
+        background: '#0f172a',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        padding: '80px 0 40px',
+        color: 'white'
       }}
     >
       <div className="container">
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '40px',
-            marginBottom: '48px',
+            gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
+            gap: '60px',
+            marginBottom: '64px',
           }}
         >
           <div>
-            <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '24px', letterSpacing: '-1px' }}>
               WindWireless
             </h3>
-            <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', fontSize: '14px' }}>
-              Conectando o mercado americano de iPhones usados aos maiores lojistas do Brasil.
-              Qualidade, procedência e logística eficiente.
+            <p style={{ color: '#94a3b8', lineHeight: '1.7', fontSize: '15px', maxWidth: '300px' }}>
+              {t('description')}
             </p>
           </div>
 
           <div>
-            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px' }}>Empresa</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <a href="#about" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '24px', color: 'white', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('company')}</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <a href="#about" style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
                 Sobre nós
               </a>
-              <a href="#process" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                Como funciona
-              </a>
-              <a href="#careers" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                Trabalhe conosco
+              <a href="#products" style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
+                Nossos Produtos
               </a>
             </div>
           </div>
 
           <div>
-            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px' }}>Suporte</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <a href="/help" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                Central de Ajuda
-              </a>
-              <a href="/terms" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '24px', color: 'white', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('support')}</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <a href="/terms" style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
                 Termos de Uso
               </a>
-              <a href="/privacy" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+              <a href="/privacy" style={{ color: '#94a3b8', fontSize: '15px', textDecoration: 'none' }}>
                 Privacidade
               </a>
             </div>
           </div>
 
           <div>
-            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px' }}>Contato</h4>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '24px', color: 'white', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('contact')}</h4>
+            <p style={{ color: '#94a3b8', fontSize: '15px', marginBottom: '12px' }}>
               Miami, FL - USA
             </p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-              contact@windwireless.com
-            </p>
+            <a href="https://wa.me/17869634734" target="_blank" rel="noopener noreferrer" style={{ color: '#25d366', fontSize: '15px', textDecoration: 'none', fontWeight: '700' }}>
+              WhatsApp: +1 (786) 963-4734
+            </a>
           </div>
         </div>
 
         <div
           style={{
-            borderTop: '1px solid var(--border-subtle)',
-            paddingTop: '32px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            paddingTop: '40px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>
-            &copy; 2026 WindWireless LLC. All rights reserved.
+          <p style={{ color: '#64748b', fontSize: '13px' }}>
+            &copy; {new Date().getFullYear()} {t('rights')}
           </p>
-          <div style={{ display: 'flex', gap: '16px' }}>{/* Social Icons Placeholder */}</div>
+          <div style={{ display: 'flex', gap: '24px' }}>
+            {/* Social placeholders if needed */}
+          </div>
         </div>
       </div>
     </footer>
