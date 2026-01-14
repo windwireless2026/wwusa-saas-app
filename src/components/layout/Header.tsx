@@ -43,9 +43,9 @@ export default function Header({ locale }: { locale: string }) {
         }}
       >
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '180px', height: '40px', position: 'relative' }}>
+          <div style={{ width: '180px', height: '50px', position: 'relative' }}>
             <Image
-              src="/images/wind_wireless.png"
+              src="/images/wind_wireless_2.png"
               alt="WindWireless Logo"
               fill
               style={{ objectFit: 'contain', objectPosition: 'left center' }}
