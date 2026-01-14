@@ -22,11 +22,11 @@
   "About": {
     "titlePrefix": "Procedência que constrói",
     "titleHighlight": "confiança",
-    "p1": "A WindWireless não é apenas uma distribuidora. Somos seus olhos nos Estados Unidos. Nossa operação possui Resale Certificate ativo na Flórida, permitindo acesso exclusivo aos maiores leilões de eletrônicos do país.",
-    "p2": "Cada dispositivo passa por um rigoroso processo de triagem. Trabalhamos exclusivamente com Grades A e B, garantindo que o produto que chega na sua prateleira esteja pronto para encantar seu cliente final, minimizando RMAs e maximizando sua margem.",
-    "list1": "Inspeção técnica individual",
+    "p1": "A WIND WIRELESS ENTERPRISES LLC é uma operadora logística e distribuidora com certificação R2, o que nos garante acesso direto ao inventário das maiores operadoras e leilões corporativos dos Estados Unidos.",
+    "p2": "Diferente de atravessadores comuns, nossa certificação nos permite selecionar lotes diretamente da fonte, garantindo Grades A e B com procedência legal e rastreabilidade total. Isso significa maior margem para você e confiança para seu cliente.",
+    "list1": "Certificação R2 e Tier 1 Sourcing",
     "list2": "Suporte logístico especializado",
-    "list3": "Pós-venda ativo e humanizado"
+    "list3": "Atendimento humanizado em Miami"
   },
   "Products": {
     "title": "Qualidade sem concessões",
@@ -36,8 +36,8 @@
     "item1Desc": "Foco exclusivo em Grades A e B. Sem amassados profundos ou riscos na tela que comprometam a revenda.",
     "item2Title": "Procedência Legal",
     "item2Desc": "Todos os produtos possuem invoice e origem rastreável de leilões oficiais americanos.",
-    "item3Title": "Testes de Hardware",
-    "item3Desc": "Bateria, Face ID, Display e conectividade. Tudo validado por nossa equipe técnica em Miami."
+    "item3Title": "Certificação R2",
+    "item3Desc": "Operamos sob os mais altos padrões de qualidade e segurança ambiental do mercado americano."
   },
   "Contact": {
     "title": "Fale com nossos especialistas",
