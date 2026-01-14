@@ -1,0 +1,19 @@
+                <img 
+                    src="/images/wind_wireless.png" 
+                    alt="WindSystem Logo"
+                    style={{
+                        minWidth: '36px',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '11px',
+                        objectFit: 'contain',
+                        background: 'white',
+                        padding: '4px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}
+                />
+                {!isCollapsed && (
+                    <span style={{ fontSize: '18px', fontWeight: '850', color: '#1e293b', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+                        WIND WIRELESS
+                    </span>
+                )}

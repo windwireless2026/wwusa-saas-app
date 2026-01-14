@@ -1,0 +1,513 @@
+{
+  "Header": {
+    "about": "Sobre nós",
+    "products": "Nossos Produtos",
+    "contact": "Contato",
+    "login": "Login"
+  },
+  "Hero": {
+    "badge": "Direto dos Leilões dos EUA",
+    "titlePrefix": "A fonte definitiva de",
+    "titleHighlight": "iPhones Premium",
+    "titleSuffix": "para o seu negócio",
+    "description": "Compre iPhones Grade A e B diretamente de leilões americanos com certificação e procedência garantida. Abasteça sua loja com os melhores preços do mercado global.",
+    "ctaPrimary": "Começar agora",
+    "ctaSecondary": "Como funciona"
+  },
+  "Stats": {
+    "sold": "Aparelhos vendidos",
+    "partners": "Lojistas parceiros",
+    "hq": "Sede em Miami"
+  },
+  "About": {
+    "titlePrefix": "Procedência que constrói",
+    "titleHighlight": "confiança",
+    "p1": "A WindWireless não é apenas uma distribuidora. Somos seus olhos nos Estados Unidos. Nossa operação possui Resale Certificate ativo na Flórida, permitindo acesso exclusivo aos maiores leilões de eletrônicos do país.",
+    "p2": "Cada dispositivo passa por um rigoroso processo de triagem. Trabalhamos exclusivamente com Grades A e B, garantindo que o produto que chega na sua prateleira esteja pronto para encantar seu cliente final, minimizando RMAs e maximizando sua margem.",
+    "list1": "Inspeção técnica individual",
+    "list2": "Logística integrada para o Brasil",
+    "list3": "Pós-venda ativo e humanizado"
+  },
+  "CTA": {
+    "title": "Pronto para escalar seu estoque?",
+    "description": "Junte-se ao grupo seleto de lojistas que compram com preço de atacado americano e segurança total.",
+    "button": "Solicitar Acesso"
+  },
+  "Footer": {
+    "description": "Conectando o mercado americano de iPhones usados aos maiores lojistas do Brasil. Qualidade, procedência e logística eficiente.",
+    "company": "Empresa",
+    "support": "Suporte",
+    "contact": "Contato",
+    "rights": "WindWireless LLC. Todos os direitos reservados."
+  },
+  "Dashboard": {
+    "title": "Visão Geral",
+    "Sidebar": {
+      "overview": "Visão Geral",
+      "registrationModule": "Cadastro",
+      "operationsModule": "Operações",
+      "comercialModule": "Comercial",
+      "financialModule": "Financeiro",
+      "securityModule": "Segurança",
+      "agents": "Agentes",
+      "manufacturers": "Fabricantes",
+      "productTypes": "Tipos de Produto",
+      "stockLocations": "Locais de Estoque",
+      "models": "Modelos",
+      "users": "Usuários",
+      "financial": "Finanças",
+      "stock": "Estoque",
+      "operationsDashboard": "Dashboard",
+      "invoices": "Contas a Pagar",
+      "auditLogs": "Logs de Auditoria",
+      "companyData": "Dados da Empresa",
+      "comercialDashboard": "Dashboard",
+      "financialDashboard": "Dashboard",
+      "estimates": "Estimates",
+      "viewProfile": "Ver Perfil",
+      "settings": "Configurações",
+      "logout": "Sair da conta",
+      "language": "Idioma"
+    },
+    "Registration": {
+      "title": "Central de Cadastro",
+      "breadcrumb": "Cadastro",
+      "description": "Selecione o módulo que deseja gerenciar a partir desta central.",
+      "groups": {
+        "administrative": "Administrativo",
+        "products": "Produtos"
+      },
+      "agents": {
+        "title": "Agentes",
+        "description": "Gerencie fornecedores, clientes e prestadores de serviço."
+      },
+      "products": {
+        "title": "Modelos",
+        "description": "Catálogo de modelos e especificações."
+      },
+      "product_types": {
+        "title": "Tipos de Produto",
+        "description": "Defina o rastreio (IMEI/Serial) por categoria.",
+        "subtitle": "Defina categorias e métodos de rastreamento (IMEI/Serial)",
+        "addNew": "Novo Tipo",
+        "searchPlaceholder": "Buscar tipo de produto...",
+        "tableName": "Nome",
+        "tableTracking": "Rastreamento",
+        "actions": "Ações",
+        "loading": "Carregando...",
+        "noData": "Nenhum tipo encontrado",
+        "confirmDeleteTitle": "Excluir Tipo",
+        "confirmDeleteMessage": "Deseja realmente excluir",
+        "success": "Sucesso",
+        "deleteSuccess": "Tipo excluído com sucesso!",
+        "error": "Erro"
+      },
+      "manufacturers": {
+        "title": "Fabricantes",
+        "description": "Gestão de marcas e fabricantes homologados.",
+        "subtitle": "Gerencie marcas e fabricantes aprovados",
+        "addNew": "Novo Fabricante",
+        "searchPlaceholder": "Buscar fabricante...",
+        "tableName": "Nome",
+        "tableWebsite": "Website"
+      },
+      "users": {
+        "title": "Usuários",
+        "description": "Controle de acesso da equipe e permissões."
+      },
+      "financial": {
+        "title": "Financeiro",
+        "description": "Contas bancárias e métodos de pagamento."
+      },
+      "banks": {
+        "title": "Bancos & Routings",
+        "description": "Cadastre números de roteamento (ABA/Routing) para identificação automática."
+      },
+      "access_profiles": {
+        "title": "Perfil de Acesso",
+        "description": "Níveis de permissão e grupos de usuários."
+      },
+      "stock_locations": {
+        "title": "Locais de Estoque",
+        "description": "Gerencie onde seus produtos são armazenados."
+      },
+      "actions": "Ações",
+      "loading": "Carregando...",
+      "noData": "Nenhum registro encontrado",
+      "confirmDeleteTitle": "Excluir Registro",
+      "confirmDeleteMessage": "Deseja realmente excluir",
+      "success": "Sucesso",
+      "deleteSuccess": "Registro excluído com sucesso!",
+      "Common": {
+        "success": "Sucesso",
+        "error": "Erro"
+      }
+    },
+    "Catalog": {
+      "title": "Modelos",
+      "breadcrumb": "Cadastro",
+      "description": "Gerencie novos modelos e especificações técnicas",
+      "addNew": "Novo Modelo",
+      "viewActive": "Ver Ativos",
+      "viewTrash": "Ver Lixeira",
+      "searchPlaceholder": "Pesquisar por modelo, produto ou fabricante...",
+      "search": "Pesquisar por modelo, produto ou fabricante...",
+      "newButton": "Novo Modelo",
+      "tableType": "Tipo",
+      "tableManufacturer": "Fabricante",
+      "tableName": "Modelo",
+      "tableYear": "Ano",
+      "table": {
+        "product": "Produto",
+        "manufacturer": "Fabricante",
+        "model": "Modelo",
+        "releaseYear": "Lançamento",
+        "actions": "Ações"
+      }
+    },
+    "Agents": {
+      "title": "Agentes & Parceiros",
+      "breadcrumb": "Cadastro",
+      "description": "Gerencie fornecedores, clientes, prestadores e todos os parses de negócio.",
+      "table": {
+        "name": "Nome",
+        "country": "País",
+        "types": "Tipos",
+        "document": "Documento",
+        "contact": "Contato",
+        "actions": "Ações"
+      },
+      "newButton": "Novo Agente",
+      "editTitle": "Editar Agente",
+      "form": {
+        "country": "País / Jurisdição",
+        "types": "Tipo de Agente",
+        "typesNote": "(Selecione um ou mais)",
+        "basicInfo": "Informações Básicas",
+        "name": "Nome Fantasia / Apelido",
+        "legalName": "Razão Social",
+        "taxId": "Tax ID / EIN / CNPJ",
+        "contact": "Contato",
+        "address": "Endereço",
+        "bank": "Dados Bancários",
+        "documents": "Documentos",
+        "financialClass": "Classe Financeira Padrão (Sugestão para APs)",
+        "searchPlaceholder": "🔍 Digite para pesquisar...",
+        "clearSelection": "Limpar seleção",
+        "commercialSettings": "Configurações Comerciais",
+        "profile": "Perfil",
+        "attach": "Anexar",
+        "alreadyAttached": "Já anexado",
+        "categories": {
+          "comercial": "Comercial",
+          "operacional": "Operacional",
+          "interno": "Interno",
+          "financeiro": "Financeiro"
+        },
+        "types_list": {
+          "cliente": "Cliente",
+          "fornecedor_estoque": "Fornecedor (Estoque)",
+          "frete": "Frete / Logística",
+          "transportadora_cliente": "Transportadora (Exempt)",
+          "prestador": "Prestador de Serviço",
+          "suprimentos": "Suprimentos & Compras",
+          "utilidades": "Utilidades (Aluguel/Fixo)",
+          "consultoria": "Consultoria / Jurídico",
+          "colaborador": "Colaborador / Staff",
+          "socio": "Sócio / Diretor",
+          "banco": "Banco / Financeiro",
+          "cartao_credito": "Cartão de Crédito",
+          "seguradora": "Seguradora"
+        },
+        "status": {
+          "pending": "Pendente",
+          "received": "Recebido",
+          "waived": "Dispensado",
+          "na": "N/A"
+        },
+        "messages": {
+          "successSave": "Agente salvo com sucesso!",
+          "successDelete": "Agente excluído com sucesso!",
+          "errorSave": "Erro ao salvar agente",
+          "errorDelete": "Erro ao excluir agente",
+          "confirmDelete": "Tem certeza que deseja excluir o agente \"{name}\"?",
+          "confirmDeleteTitle": "Excluir Agente",
+          "syncWarning": "Salvo (Sincronizado)"
+        }
+      },
+      "filters": {
+        "active": "Ativos",
+        "trash": "Lixeira",
+        "allTypes": "Todos os Tipos"
+      }
+    },
+    "ProductTypes": {
+      "Celular": "Celular",
+      "Cell phone": "Celular",
+      "Tablet": "Tablet",
+      "iPad": "Tablet",
+      "Relogio": "Relógio",
+      "Watch": "Relógio",
+      "Fone": "Fone",
+      "AirPods": "Fone",
+      "Computador": "Computador",
+      "Macbook": "Computador",
+      "Accessory": "Acessório",
+      "TV": "TV"
+    },
+    "StockLocations": {
+      "title": "Locais de Estoque",
+      "breadcrumb": "Cadastro",
+      "subtitle": "Gerencie onde seus produtos são armazenados",
+      "newButton": "Novo Local",
+      "searchPlaceholder": "Buscar local...",
+      "active": "Ativos",
+      "trash": "Lixeira",
+      "loading": "Carregando...",
+      "noData": "Nenhum local encontrado",
+      "actions": "Ações",
+      "table": {
+        "name": "Nome",
+        "description": "Descrição",
+        "city": "Cidade",
+        "state": "Estado",
+        "address": "Endereço",
+        "actions": "Ações"
+      },
+      "modal": {
+        "newTitle": "Novo Local",
+        "editTitle": "Editar Local",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Ex: Armazém Orlando, Prateleira A1...",
+        "descLabel": "Descrição (Opcional)",
+        "descPlaceholder": "Detalhes sobre o local...",
+        "addressLabel": "Endereço",
+        "addressPlaceholder": "Rua, número...",
+        "cityLabel": "Cidade",
+        "cityPlaceholder": "Ex: Orlando",
+        "stateLabel": "Estado",
+        "statePlaceholder": "Ex: FL",
+        "countryLabel": "País",
+        "countryPlaceholder": "Ex: USA",
+        "zipLabel": "Zip Code",
+        "zipPlaceholder": "32801",
+        "cancel": "Cancelar",
+        "save": "Salvar"
+      },
+      "messages": {
+        "successAdd": "Local criado com sucesso!",
+        "successUpdate": "Local atualizado com sucesso!",
+        "successRestore": "Local restaurado!",
+        "errorSave": "Erro ao salvar local: ",
+        "errorDelete": "Erro ao excluir: ",
+        "errorRestore": "Erro ao restaurar: ",
+        "confirmDelete": "Deseja enviar \"{name}\" para a lixeira?",
+        "deleteTitle": "Excluir Local"
+      }
+    },
+    "Inventory": {
+      "title": "Estoque",
+      "breadcrumb": "Operações",
+      "search": "Procurar por modelo, IMEI ou invoice...",
+      "newButton": "Novo Item",
+      "importButton": "Importar Planilha",
+      "downloadTemplate": "Baixar Modelo",
+      "table": {
+        "model": "Modelo",
+        "imei": "IMEI / Serial",
+        "capacity": "Capacidade",
+        "color": "Cor",
+        "grade": "Grade",
+        "price": "Preço ($)",
+        "status": "Status",
+        "actions": "Ações",
+        "responsible": "Responsável",
+        "date": "Data"
+      }
+    },
+    "Users": {
+      "title": "Gestão de Usuários",
+      "breadcrumb": "Cadastro",
+      "search": "Procurar usuário...",
+      "searchPlaceholder": "Procurar usuário...",
+      "newButton": "Convidar Usuário",
+      "table": {
+        "name": "Nome",
+        "email": "Email",
+        "role": "Cargo",
+        "status": "Status",
+        "date": "Data de Cadastro",
+        "actions": "Ações"
+      },
+      "modal": {
+        "titleNew": "Convidar Novo Usuário",
+        "titleEdit": "Editar Usuário",
+        "firstName": "Nome",
+        "lastName": "Sobrenome",
+        "email": "Email",
+        "role": "Cargo",
+        "address": "Endereço",
+        "save": "Enviar Convite",
+        "cancel": "Cancelar",
+        "saveEdit": "Salvar Alterações"
+      }
+    },
+    "Common": {
+      "all": "Todos",
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "delete": "Excluir",
+      "edit": "Editar",
+      "search": "Pesquisar",
+      "actions": "Ações",
+      "loading": "Carregando...",
+      "error": "Erro",
+      "success": "Sucesso",
+      "trackingMethod": "Método de Rastreio",
+      "paymentMethods": "Métodos de Pagamento Alternativos",
+      "clearFilters": "Limpar Filtros",
+      "subcategory": "Subcategoria",
+      "noRecords": "Nenhum registro encontrado",
+      "selectAll": "(Selecionar Tudo)",
+      "noResults": "Nenhum resultado",
+      "vazio": "(Vazio)",
+      "filterWarning": "Nenhum filtro selecionado - Tabela vazia",
+      "selectedOf": "{count} de {total} selecionados",
+      "restore": "Restaurar"
+    },
+    "Home": {
+      "welcome": "Bem-vindo ao painel de controle WindWireless.",
+      "totalStock": "Estoque Total",
+      "stockValue": "Valor em Estoque",
+      "salesMonth": "Vendas (Mês)",
+      "pendingOrders": "Pedidos Pendentes",
+      "commercialPerformance": "Desempenho Comercial",
+      "recentActivity": "Atividade Recente",
+      "chartPlaceholder": "Visualização de Gráfico",
+      "trendVsLastMonth": "{trend} vs mês passado",
+      "actionRequired": "Ação necessária"
+    },
+    "Invoices": {
+      "title": "Contas a Pagar",
+      "breadcrumb": "Finanças",
+      "subtitle": "Gerencie autorizações de pagamento e faturas",
+      "addNew": "Nova AP",
+      "filters": {
+        "all": "Todos",
+        "pending": "Pendente",
+        "paid": "Pago",
+        "overdue": "Atrasado"
+      },
+      "table": {
+        "apNumber": "AP / Ref",
+        "vendor": "Fornecedor",
+        "costCenter": "Centro de Custo",
+        "amount": "Valor",
+        "dueDate": "Vencimento",
+        "status": "Status",
+        "actions": "Ações"
+      },
+      "deleteSuccess": "AP enviada para a lixeira.",
+      "restoreSuccess": "AP restaurada com sucesso!",
+      "confirmDeleteTitle": "Confirmar Exclusão",
+      "confirmDeleteMessage": "Deseja realmente excluir a AP {apNumber}?"
+    },
+    "Financial": {
+      "title": "Finanças",
+      "breadcrumb": "Cadastro",
+      "groups": {
+        "title": "Grupos Financeiros",
+        "description": "Gerencie os grupos de classificação financeira",
+        "newButton": "+ Novo Grupo",
+        "table": {
+          "order": "Ordem",
+          "name": "Nome",
+          "description": "Descrição",
+          "status": "Status",
+          "actions": "Ações"
+        },
+        "status": {
+          "active": "✓ Ativo",
+          "inactive": "✗ Inativo"
+        },
+        "modal": {
+          "new": "Novo Grupo",
+          "edit": "Editar Grupo",
+          "name": "Nome do Grupo",
+          "order": "Ordem de Exibição",
+          "description": "Descrição",
+          "save": "Salvar Grupo",
+          "cancel": "Cancelar"
+        }
+      },
+      "dre": {
+        "title": "Categorias DRE",
+        "description": "Defina as categorias para o DRE Gerencial",
+        "newButton": "+ Nova Categoria",
+        "table": {
+          "order": "Ordem",
+          "name": "Nome",
+          "type": "Tipo",
+          "status": "Status",
+          "actions": "Ações",
+          "subtotal": "Subtotal",
+          "total": "Total"
+        },
+        "modal": {
+          "new": "Nova Categoria DRE",
+          "edit": "Editar Categoria DRE",
+          "name": "Nome da Categoria",
+          "type": "Tipo",
+          "order": "Ordem de Exibição",
+          "isSubtotal": "É Subtotal",
+          "isTotal": "É Total"
+        }
+      },
+      "capital": {
+        "title": "Batimento de Capital",
+        "description": "Categorias para o fluxo de caixa",
+        "newButton": "+ Nova Categoria",
+        "table": {
+          "order": "Ordem",
+          "name": "Nome",
+          "description": "Descrição",
+          "flow": "Fluxo",
+          "status": "Status",
+          "actions": "Ações"
+        },
+        "modal": {
+          "new": "Nova Categoria de Batimento",
+          "edit": "Editar Categoria de Batimento",
+          "name": "Nome da Categoria",
+          "flow": "Tipo de Fluxo",
+          "description": "Descrição",
+          "order": "Ordem de Exibição"
+        }
+      },
+      "classes": {
+        "title": "Classes Financeiras",
+        "description": "Classificação detalhada das despesas e receitas",
+        "newButton": "+ Nova Classe",
+        "table": {
+          "name": "Nome",
+          "group": "Grupo",
+          "dre": "Categoria DRE",
+          "capital": "Fluxo de Caixa",
+          "status": "Status",
+          "actions": "Ações"
+        },
+        "modal": {
+          "new": "Nova Classe Financeira",
+          "edit": "Editar Classe Financeira",
+          "name": "Nome da Classe",
+          "group": "Grupo Financeiro",
+          "dre": "Categoria DRE",
+          "capital": "Batimento de Capital",
+          "description": "Descrição",
+          "taxDeductible": "Dedutível de Imposto",
+          "requiresApproval": "Exige Aprovação"
+        }
+      }
+    }
+  }
+}

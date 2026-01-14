@@ -1,0 +1,403 @@
+{
+  "Header": {
+    "about": "About Us",
+    "products": "Our Products",
+    "contact": "Contact",
+    "login": "Login"
+  },
+  "Hero": {
+    "badge": "Direct From USA Auctions",
+    "titlePrefix": "The definitive source of",
+    "titleHighlight": "Premium iPhones",
+    "titleSuffix": "for your business",
+    "description": "Buy Grade A and B iPhones directly from US auctions with certification and guaranteed origin. Stock your store with the best prices in the global market.",
+    "ctaPrimary": "Start Now",
+    "ctaSecondary": "How it works"
+  },
+  "Stats": {
+    "sold": "Devices sold",
+    "partners": "Partner retailers",
+    "hq": "HQ in Miami"
+  },
+  "About": {
+    "titlePrefix": "Origin that builds",
+    "titleHighlight": "trust",
+    "p1": "WindWireless is not just a distributor. We are your eyes in the United States. Our operation has an active Resale Certificate in Florida, allowing exclusive access to the country's largest electronics auctions.",
+    "p2": "Each device undergoes a rigorous screening process. We work exclusively with Grades A and B, ensuring that the product arriving on your shelf is ready to delight your end customer, minimizing RMAs and maximizing your margin.",
+    "list1": "Individual technical inspection",
+    "list2": "Integrated logistics for Brazil",
+    "list3": "Active and humanized after-sales support"
+  },
+  "CTA": {
+    "title": "Ready to scale your inventory?",
+    "description": "Join the select group of retailers buying at US wholesale prices with total security.",
+    "button": "Request Access"
+  },
+  "Footer": {
+    "description": "Connecting the US used iPhone market to the largest retailers in Brazil. Quality, origin, and efficient logistics.",
+    "company": "Company",
+    "support": "Support",
+    "contact": "Contact",
+    "rights": "WindWireless LLC. All rights reserved."
+  },
+  "Dashboard": {
+    "title": "Overview",
+    "Sidebar": {
+      "overview": "Overview",
+      "registration": "Registration",
+      "registrationModule": "Registration",
+      "operationsModule": "Operations",
+      "agents": "Agents",
+      "manufacturers": "Manufacturers",
+      "productTypes": "Product Types",
+      "stockLocations": "Stock Locations",
+      "models": "Models",
+      "stock": "Inventory",
+      "finance_settings": "Finance",
+      "financial": "Financial",
+      "cash": "Cash",
+      "reports": "Reports",
+      "settings": "Settings",
+      "logout": "Logout",
+      "language": "Language",
+      "operationsDashboard": "Dashboard",
+      "invoices": "Accounts Payable",
+      "comercialModule": "Sales",
+      "financialModule": "Financial",
+      "securityModule": "Security",
+      "auditLogs": "Audit Logs",
+      "users": "Users",
+      "companyData": "Company Data",
+      "comercialDashboard": "Dashboard",
+      "financialDashboard": "Dashboard",
+      "estimates": "Estimates"
+    },
+    "Registration": {
+      "title": "Registration Center",
+      "breadcrumb": "Registration",
+      "description": "Select the module you want to manage from this center.",
+      "groups": {
+        "administrative": "Administrative",
+        "products": "Products"
+      },
+      "agents": {
+        "title": "Agents",
+        "description": "Manage suppliers, customers, and service providers."
+      },
+      "products": {
+        "title": "Models",
+        "description": "Catalog of models and specifications."
+      },
+      "product_types": {
+        "title": "Product Types",
+        "description": "Define tracking (IMEI/Serial) by category.",
+        "subtitle": "Define categories and tracking methods (IMEI/Serial)",
+        "addNew": "New Type",
+        "searchPlaceholder": "Search product type...",
+        "tableName": "Name",
+        "tableTracking": "Tracking",
+        "actions": "Actions",
+        "loading": "Loading...",
+        "noData": "No types found",
+        "confirmDeleteTitle": "Delete Type",
+        "confirmDeleteMessage": "Do you really want to delete",
+        "success": "Success",
+        "deleteSuccess": "Type deleted successfully!",
+        "error": "Error"
+      },
+      "manufacturers": {
+        "title": "Manufacturers",
+        "description": "Management of approved brands and manufacturers.",
+        "subtitle": "Manage approved brands and manufacturers",
+        "addNew": "New Manufacturer",
+        "searchPlaceholder": "Search manufacturer...",
+        "tableName": "Name",
+        "tableWebsite": "Website"
+      },
+      "users": {
+        "title": "Users",
+        "description": "Team access control and permissions."
+      },
+      "financial": {
+        "title": "Financial",
+        "description": "Bank accounts and payment methods."
+      },
+      "banks": {
+        "title": "Banks & Routings",
+        "description": "Register ABA/Routing numbers for automatic bank identification."
+      },
+      "access_profiles": {
+        "title": "Access Profiles",
+        "description": "Permission levels and user groups."
+      },
+      "stock_locations": {
+        "title": "Stock Locations",
+        "description": "Manage where your products are stored."
+      },
+      "actions": "Actions",
+      "loading": "Loading...",
+      "noData": "No records found",
+      "confirmDeleteTitle": "Delete Record",
+      "confirmDeleteMessage": "Do you really want to delete",
+      "success": "Success",
+      "deleteSuccess": "Record deleted successfully!",
+      "Common": {
+        "success": "Success",
+        "error": "Error"
+      }
+    },
+    "Catalog": {
+      "title": "Models",
+      "breadcrumb": "Registration",
+      "addNew": "New Model",
+      "searchPlaceholder": "Search by model, product or manufacturer...",
+      "search": "Search by model, product or manufacturer...",
+      "newButton": "New Model",
+      "tableType": "Type",
+      "tableManufacturer": "Manufacturer",
+      "tableName": "Model",
+      "tableYear": "Year",
+      "table": {
+        "product": "Product",
+        "manufacturer": "Manufacturer",
+        "model": "Model",
+        "releaseYear": "Release",
+        "actions": "Actions"
+      }
+    },
+    "Agents": {
+      "title": "Agents & Partners",
+      "breadcrumb": "Registration",
+      "description": "Manage suppliers, customers, providers, and all business partners.",
+      "newButton": "New Agent",
+      "filters": {
+        "active": "Active",
+        "trash": "Trash",
+        "allTypes": "All Types"
+      },
+      "table": {
+        "name": "Name",
+        "country": "Country",
+        "types": "Types",
+        "document": "ID / Tax ID",
+        "contact": "Contact",
+        "actions": "Actions"
+      },
+      "form": {
+        "country": "Country / Jurisdiction",
+        "types": "Agent Type",
+        "typesNote": "(Select one or more)",
+        "basicInfo": "Basic Information",
+        "name": "Display Name / Nickname",
+        "legalName": "Legal Name",
+        "taxId": "Tax ID / EIN / CNPJ",
+        "contact": "Contact",
+        "address": "Address",
+        "bank": "Banking Details",
+        "documents": "Documents",
+        "financialClass": "Default Financial Class (Draft for APs)",
+        "searchPlaceholder": "🔍 Type to search...",
+        "clearSelection": "Clear selection",
+        "commercialSettings": "Commercial Settings",
+        "profile": "Profile",
+        "attach": "Attach",
+        "alreadyAttached": "Already attached",
+        "categories": {
+          "comercial": "Commercial",
+          "operacional": "Operational",
+          "interno": "Internal",
+          "financeiro": "Financial"
+        },
+        "types_list": {
+          "cliente": "Client",
+          "fornecedor_estoque": "Supplier (Stock)",
+          "frete": "Freight / Logistics",
+          "transportadora_cliente": "Forwarding Agent (Exempt)",
+          "prestador": "Service Provider",
+          "suprimentos": "Supplies & Procurement",
+          "utilidades": "Utilities (Rent/Fixed)",
+          "consultoria": "Consulting / Legal",
+          "colaborador": "Employee / Staff",
+          "socio": "Partner / Director",
+          "banco": "Bank / Financial",
+          "cartao_credito": "Credit Card",
+          "seguradora": "Insurance"
+        },
+        "status": {
+          "pending": "Pending",
+          "received": "Received",
+          "waived": "Waived",
+          "na": "N/A"
+        },
+        "messages": {
+          "successSave": "Agent saved successfully!",
+          "successDelete": "Agent deleted successfully!",
+          "errorSave": "Error saving agent",
+          "errorDelete": "Error deleting agent",
+          "confirmDelete": "Are you sure you want to delete agent \"{name}\"?",
+          "confirmDeleteTitle": "Delete Agent",
+          "syncWarning": "Saved (Synced)"
+        }
+      },
+      "addNew": "Add New Agent",
+      "editTitle": "Edit Agent"
+    },
+    "ProductTypes": {
+      "Celular": "Smartphone",
+      "Cell phone": "Smartphone",
+      "Tablet": "Tablet",
+      "iPad": "Tablet",
+      "Relogio": "Smartwatch",
+      "Watch": "Smartwatch",
+      "Fone": "Headphones",
+      "AirPods": "Headphones",
+      "Computador": "Laptop",
+      "Macbook": "Laptop",
+      "TV": "TV"
+    },
+    "StockLocations": {
+      "title": "Stock Locations",
+      "breadcrumb": "Registration",
+      "newButton": "New Location",
+      "active": "Active",
+      "trash": "Trash",
+      "table": {
+        "name": "Name",
+        "description": "Description",
+        "actions": "Actions"
+      },
+      "modal": {
+        "newTitle": "New Location",
+        "editTitle": "Edit Location",
+        "nameLabel": "Name",
+        "namePlaceholder": "Ex: Orlando Warehouse, Shelf A1...",
+        "descLabel": "Description (Optional)",
+        "descPlaceholder": "Details about the location...",
+        "addressLabel": "Address",
+        "addressPlaceholder": "Street, number...",
+        "cityLabel": "City",
+        "cityPlaceholder": "Ex: Orlando",
+        "stateLabel": "State",
+        "statePlaceholder": "Ex: FL",
+        "countryLabel": "Country",
+        "countryPlaceholder": "Ex: USA",
+        "zipLabel": "Zip Code",
+        "zipPlaceholder": "32801",
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "messages": {
+        "successAdd": "Location created successfully!",
+        "successUpdate": "Location updated successfully!",
+        "successRestore": "Location restored!",
+        "errorSave": "Error saving location: ",
+        "errorDelete": "Error deleting: ",
+        "errorRestore": "Error restoring: ",
+        "confirmDelete": "Do you want to send \"{name}\" to trash?",
+        "deleteTitle": "Delete Location"
+      }
+    },
+    "Inventory": {
+      "title": "Inventory",
+      "breadcrumb": "Operations",
+      "search": "Search for model, IMEI or invoice...",
+      "newButton": "New Item",
+      "table": {
+        "model": "Model",
+        "imei": "IMEI / Serial",
+        "capacity": "Capacity",
+        "color": "Color",
+        "grade": "Grade",
+        "price": "Price ($)",
+        "status": "Status",
+        "actions": "Actions",
+        "responsible": "Responsible",
+        "date": "Date"
+      },
+      "importButton": "Import Spreadsheet",
+      "downloadTemplate": "Download Template"
+    },
+    "Users": {
+      "title": "User Management",
+      "breadcrumb": "Registration",
+      "search": "Search user...",
+      "searchPlaceholder": "Search user...",
+      "newButton": "Invite User",
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "date": "Registration Date",
+        "actions": "Actions"
+      },
+      "modal": {
+        "titleNew": "Invite New User",
+        "titleEdit": "Edit User",
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "email": "Email",
+        "role": "Role",
+        "address": "Address",
+        "save": "Send Invitation",
+        "cancel": "Cancel",
+        "saveEdit": "Save Changes"
+      }
+    },
+    "Common": {
+      "all": "All",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "search": "Search",
+      "actions": "Actions",
+      "loading": "Loading...",
+      "success": "Success",
+      "trackingMethod": "Tracking Method",
+      "paymentMethods": "Alternative Payment Methods",
+      "clearFilters": "Clear Filters",
+      "subcategory": "Subcategory",
+      "noRecords": "No records found",
+      "selectAll": "(Select All)",
+      "noResults": "No results",
+      "vazio": "(Empty)",
+      "filterWarning": "No filter selected - Empty table",
+      "selectedOf": "{count} of {total} selected",
+      "restore": "Restore"
+    },
+    "Home": {
+      "welcome": "Welcome to the WindWireless control panel.",
+      "totalStock": "Total Stock",
+      "stockValue": "Stock Value",
+      "salesMonth": "Sales (Month)",
+      "pendingOrders": "Pending Orders",
+      "commercialPerformance": "Commercial Performance",
+      "recentActivity": "Recent Activity",
+      "chartPlaceholder": "Chart Visualization",
+      "trendVsLastMonth": "{trend} vs last month",
+      "actionRequired": "Action required"
+    },
+    "Invoices": {
+      "title": "Accounts Payable",
+      "breadcrumb": "Financial",
+      "subtitle": "Manage payment authorizations and invoices",
+      "addNew": "New AP",
+      "filters": {
+        "all": "All",
+        "pending": "Pending",
+        "paid": "Paid",
+        "overdue": "Overdue"
+      },
+      "table": {
+        "apNumber": "AP / Ref",
+        "vendor": "Vendor",
+        "costCenter": "Cost Center",
+        "amount": "Amount",
+        "dueDate": "Due Date",
+        "status": "Status",
+        "actions": "Actions"
+      }
+    }
+  }
+}
