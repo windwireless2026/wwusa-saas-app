@@ -2,14 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
+import { useGrades } from '@/hooks/useGrades';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useUI } from '@/context/UIContext';
 import { useAuditLog } from '@/hooks/useAuditLog';
+import PageHeader from '@/components/ui/PageHeader';
+import { getErrorMessage } from '@/lib/errors';
 
-// Opções padrão para Capacidade e Grade
 const CAPACITY_OPTIONS = ['32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB', '41mm', '42mm', '44mm', '45mm', '46mm', '49mm'];
-const GRADE_OPTIONS = ['LACRADO', 'Open Box', 'A', 'A-', 'AB', 'B', 'C', 'As-Is', 'Blocked', 'RMA', 'RMA-Returns', 'RR'];
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -34,12 +35,20 @@ interface Product {
     id: string;
     name: string;
     model: string;
+    /** product_catalog.type: grupo do produto (Celular, Fone, Tablet, etc.) */
+    type?: string;
 }
 
 interface BankAccount {
     id: string;
     name: string;
     account_number: string;
+}
+
+interface Account {
+    id: string;
+    name: string;
+    code: string;
 }
 
 interface User {
@@ -55,9 +64,13 @@ interface InvoiceItem {
     financial_class_id: string;
     capacity: string;
     grade: string;
+    lot_id: string;
     quantity: number;
     unit_price: number;
     total_amount: number;
+    description?: string;
+    account_id?: string;
+    unit_cost?: number;
 }
 
 interface ComboboxProps {
@@ -168,12 +181,13 @@ function Combobox({ value, options, onChange, placeholder }: ComboboxProps) {
 
 export default function NewInvoicePage() {
     const supabase = useSupabase();
+    const { grades } = useGrades();
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
     const isEdit = !!id;
 
-    const { alert: uiAlert, confirm: uiConfirm } = useUI();
+    const { alert: uiAlert, confirm: uiConfirm, toast } = useUI();
     const { logAction } = useAuditLog();
     const [loading, setLoading] = useState(false);
     const [agents, setAgents] = useState<Agent[]>([]);
@@ -183,6 +197,8 @@ export default function NewInvoicePage() {
     const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [financialClasses, setFinancialClasses] = useState<{ id: string, name: string }[]>([]);
+    const [accounts, setAccounts] = useState<Account[]>([]);
+    const [locations, setLocations] = useState<{ id: string, name: string }[]>([]);
     const [items, setItems] = useState<InvoiceItem[]>([]);
     const [userId, setUserId] = useState<string | null>(null);
 
@@ -218,6 +234,7 @@ export default function NewInvoicePage() {
                     invoice_number: invoice.invoice_number || '',
                     invoice_date: invoice.invoice_date || '',
                     due_date: invoice.due_date || '',
+                    competence: invoice.competence || '',
                     cost_center_id: invoice.cost_center_id || '',
                     payment_frequency: invoice.payment_frequency || 'one-time',
                     invoice_type: invoice.invoice_type || 'service',
@@ -237,15 +254,16 @@ export default function NewInvoicePage() {
                         financial_class_id: item.financial_class_id || '',
                         capacity: item.capacity || '',
                         grade: item.grade || '',
+                        lot_id: item.lot_id || '',
                         quantity: item.quantity || 0,
                         unit_price: item.unit_price || 0,
                         total_amount: item.total_amount || 0
                     })));
                 }
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error fetching invoice:', error);
-            uiAlert('Erro', 'Não foi possível carregar os dados da AP: ' + error.message, 'danger');
+            uiAlert('Erro', 'Não foi possível carregar os dados da AP: ' + getErrorMessage(error), 'danger');
         } finally {
             setLoading(false);
         }
@@ -276,11 +294,11 @@ export default function NewInvoicePage() {
                 details: `Excluiu a AP ${id} via formulário`
             });
 
-            await uiAlert('Sucesso', 'AP excluída com sucesso!', 'success');
-            router.push('/dashboard/invoices');
-        } catch (error: any) {
+            toast.success('AP excluída com sucesso!');
+            router.push('/finance/accounts-payable');
+        } catch (error: unknown) {
             console.error('Error deleting invoice:', error);
-            uiAlert('Erro', 'Erro ao excluir AP: ' + error.message, 'danger');
+            uiAlert('Erro', 'Erro ao excluir AP: ' + getErrorMessage(error), 'danger');
         } finally {
             setLoading(false);
         }
@@ -291,6 +309,7 @@ export default function NewInvoicePage() {
         invoice_number: '',
         invoice_date: new Date().toISOString().split('T')[0],
         due_date: '',
+        competence: '',
         cost_center_id: '',
         payment_frequency: 'one-time',
         invoice_type: 'service',
@@ -334,8 +353,8 @@ export default function NewInvoicePage() {
 
             const { data: { publicUrl } } = supabase.storage.from('invoice-attachments').getPublicUrl(filePath);
             setFormData(prev => ({ ...prev, attachment_url: publicUrl }));
-            await uiAlert('Sucesso', 'Arquivo anexado com sucesso!', 'success');
-        } catch (error: any) {
+            toast.success('Arquivo anexado com sucesso!');
+        } catch (error: unknown) {
             console.error('Upload error:', error);
             await uiAlert('Erro no envio', 'Não foi possível enviar o arquivo.', 'danger');
         } finally {
@@ -368,12 +387,26 @@ export default function NewInvoicePage() {
 
     const fetchData = async () => {
         // Agents
-        const { data: agentsData } = await supabase
+        const { data: agentsData, error: agentsError } = await supabase
             .from('agents')
             .select('id, name, default_financial_class_id')
             .is('deleted_at', null)
             .order('name');
-        if (agentsData) setAgents(agentsData);
+
+        if (agentsError) {
+            console.error('❌ Erro ao buscar agentes:', agentsError);
+            // Fallback if default_financial_class_id doesn't exist yet
+            if (agentsError.code === '42703') {
+                const { data: fallbackData } = await supabase
+                    .from('agents')
+                    .select('id, name')
+                    .is('deleted_at', null)
+                    .order('name');
+                if (fallbackData) setAgents(fallbackData);
+            }
+        } else if (agentsData) {
+            setAgents(agentsData);
+        }
 
         // Cost Centers
         const { data: costCentersData } = await supabase
@@ -409,7 +442,7 @@ export default function NewInvoicePage() {
             console.error('❌ Erro no Supabase (product_catalog):', catError);
         } else {
             console.log('✅ Models carregados:', catalogData?.length);
-            setModels(catalogData.map((p: any) => ({ id: p.id, name: p.name, model: p.name })));
+            setModels(catalogData.map((p: any) => ({ id: p.id, name: p.name, model: p.name, type: p.type || '' })));
         }
 
         // Bank Accounts (agents with role 'banco')
@@ -427,14 +460,32 @@ export default function NewInvoicePage() {
             .select('id, name')
             .is('deleted_at', null)
             .order('name');
-        if (finData) setFinancialClasses(finData);
+        if (finData) {
+            setFinancialClasses(finData);
+            setAccounts(finData);
+        }
+
+        // Stock Locations
+        const { data: locData } = await supabase
+            .from('stock_locations')
+            .select('id, name')
+            .is('deleted_at', null)
+            .order('name');
+        if (locData) setLocations(locData);
 
         // Users for approval
-        const { data: usersData } = await supabase
+        const { data: usersData, error: usersError } = await supabase
             .from('profiles')
             .select('id, first_name, last_name')
+            .is('deleted_at', null)
             .order('first_name');
-        if (usersData) setUsers(usersData);
+
+        if (usersError) {
+            console.error('❌ Erro ao buscar perfis:', usersError);
+        } else if (usersData) {
+            console.log('✅ Perfis carregados:', usersData.length);
+            setUsers(usersData);
+        }
     };
 
     const addItem = () => {
@@ -445,6 +496,7 @@ export default function NewInvoicePage() {
             financial_class_id: '',
             capacity: '',
             grade: '',
+            lot_id: '',
             quantity: 1,
             unit_price: 0,
             total_amount: 0,
@@ -468,11 +520,18 @@ export default function NewInvoicePage() {
                     if (noCap) {
                         updated.capacity = '';
                     }
+                    // Limpar modelo se não pertencer ao novo tipo (respeitar grupo do produto)
+                    const selectedModel = models.find((m: Product) => m.id === item.product_id);
+                    const newTypeName = type?.name;
+                    if (selectedModel?.type && newTypeName && selectedModel.type !== newTypeName) {
+                        updated.product_id = '';
+                    }
                 }
 
-                // Auto-calculate total
-                if (field === 'quantity' || field === 'unit_price') {
-                    updated.total_amount = updated.quantity * updated.unit_price;
+                // Auto-calculate total for both unit_price and unit_cost
+                if (field === 'quantity' || field === 'unit_price' || field === 'unit_cost') {
+                    const unitValue = updated.unit_cost || updated.unit_price || 0;
+                    updated.total_amount = updated.quantity * unitValue;
                 }
                 return updated;
             }
@@ -498,6 +557,7 @@ export default function NewInvoicePage() {
             if (!formData.agent_id) throw new Error("Selecione um fornecedor.");
             if (!formData.invoice_number) throw new Error("Informe o número da fatura.");
             if (!formData.due_date && formData.installmentsCount === 1) throw new Error("Informe a data de vencimento.");
+            if (!formData.competence) throw new Error("Informe a competência (mês/ano).");
 
             // 1. Check for duplicate invoice number for this agent
             const { data: existing } = await supabase
@@ -526,6 +586,7 @@ export default function NewInvoicePage() {
                             agent_id: formData.agent_id,
                             invoice_number: formData.invoice_number,
                             invoice_date: formData.invoice_date,
+                            competence: formData.competence,
                             cost_center_id: formData.cost_center_id,
                             payment_frequency: formData.payment_frequency,
                             invoice_type: formData.invoice_type,
@@ -538,7 +599,7 @@ export default function NewInvoicePage() {
                     if (groupUpdateError) console.error('Error updating AP group:', groupUpdateError);
                 }
 
-                // 2. UPDATE SPECIFIC RECORD (Handles unique fields like due_date and total amount for this installment)
+                // 2. UPDATE SPECIFIC RECORD
                 const { error: updateError } = await supabase
                     .from('invoices')
                     .update({
@@ -550,7 +611,7 @@ export default function NewInvoicePage() {
 
                 if (updateError) throw updateError;
 
-                // 3. SYNC ITEMS (Update items for all installments in the group to keep consistency)
+                // 3. SYNC ITEMS
                 const itemsToInsertBase = items.filter(item =>
                     item.product_id || item.product_type_id || item.financial_class_id
                 ).map(item => ({
@@ -559,6 +620,7 @@ export default function NewInvoicePage() {
                     financial_class_id: item.financial_class_id || null,
                     capacity: item.capacity || null,
                     grade: item.grade || null,
+                    lot_id: item.lot_id || null,
                     quantity: item.quantity,
                     unit_price: item.unit_price,
                     total_amount: item.total_amount,
@@ -570,7 +632,6 @@ export default function NewInvoicePage() {
                     .eq('ap_number', formData.ap_number || '');
 
                 if (siblings && siblings.length > 0) {
-                    // This could be optimized into a single batch, but for now we follow the delete/insert pattern
                     for (const sibling of siblings) {
                         await supabase.from('invoice_items').delete().eq('invoice_id', sibling.id);
                         if (itemsToInsertBase.length > 0) {
@@ -588,14 +649,15 @@ export default function NewInvoicePage() {
                     details: `Editou a AP ${formData.ap_number || id}`
                 });
 
-                await uiAlert('Sucesso', 'AP atualizada com sucesso!', 'success');
+                toast.success('AP atualizada com sucesso!');
             } else {
-                // CREATE MODE (Original logic)
+                // CREATE MODE
                 const invoicesToCreate = installmentDates.map(inst => ({
                     agent_id: formData.agent_id,
                     invoice_number: formData.invoice_number,
                     invoice_date: formData.invoice_date,
                     due_date: inst.dueDate,
+                    competence: formData.competence,
                     cost_center_id: formData.cost_center_id,
                     payment_frequency: formData.payment_frequency,
                     invoice_type: formData.invoice_type,
@@ -633,6 +695,7 @@ export default function NewInvoicePage() {
                             financial_class_id: item.financial_class_id || null,
                             capacity: item.capacity || null,
                             grade: item.grade || null,
+                            lot_id: item.lot_id || null,
                             quantity: item.quantity,
                             unit_price: item.unit_price,
                             total_amount: item.total_amount,
@@ -660,10 +723,10 @@ export default function NewInvoicePage() {
 
                 await uiAlert('Sucesso', successMsg, 'success');
             }
-            router.push('/dashboard/invoices');
-        } catch (error: any) {
+            router.push('/finance/accounts-payable');
+        } catch (error: unknown) {
             console.error('Erro ao processar AP:', error);
-            uiAlert('Erro', 'Erro ao processar AP: ' + error.message, 'danger');
+            toast.error('Erro ao processar AP: ' + getErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -692,30 +755,20 @@ export default function NewInvoicePage() {
     };
 
     return (
-        <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            {/* Header */}
-            <div style={{
-                padding: '24px 32px',
-                borderBottom: '1px solid #e2e8f0',
-                background: 'linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%)',
-                position: 'sticky',
-                top: 0,
-                zIndex: 10
-            }}>
-                <div style={{ fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Link href="/dashboard/registration" style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <span>💰 Finanças</span>
-                    </Link>
-                    <span style={{ color: '#cbd5e1' }}>›</span>
-                    <Link href="/dashboard/invoices" style={{ textDecoration: 'none', color: '#3B82F6' }}>
-                        <span>Contas a Pagar</span>
-                    </Link>
-                </div>
-                <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                    {isEdit ? 'Editar Autorização de Pagamento (AP)' : 'Nova Autorização de Pagamento (AP)'}
-                </h2>
-            </div>
+        <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+            <PageHeader
+                title={isEdit ? 'Editar Autorização de Pagamento (AP)' : 'Nova Autorização de Pagamento (AP)'}
+                description="Gerenciar faturas e autorizações de pagamento"
+                icon="💰"
+                breadcrumbs={[
+                    { label: 'FINANCEIRO', href: '/finance', color: '#059669' },
+                    { label: 'CONTAS A PAGAR', href: '/finance/accounts-payable', color: '#059669' },
+                    { label: isEdit ? 'EDITAR' : 'NOVA AP', color: '#059669' },
+                ]}
+                moduleColor="#059669"
+            />
 
+            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', marginTop: '24px' }}>
             <form onSubmit={handleSubmit} style={{ padding: '28px 32px' }}>
                 <div style={{ marginBottom: '32px' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -734,7 +787,6 @@ export default function NewInvoicePage() {
                                 options={agents}
                                 onChange={(val) => {
                                     setFormData({ ...formData, agent_id: val });
-                                    // Auto-fill financial class for items if agent has a default
                                     const agent = agents.find(a => a.id === val);
                                     if (agent?.default_financial_class_id) {
                                         setItems(prev => prev.map(item => ({
@@ -760,6 +812,11 @@ export default function NewInvoicePage() {
                         <div>
                             <label style={labelStyle}>Data de Vencimento <span style={{ color: '#ef4444' }}>*</span></label>
                             <input required type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} style={inputStyle} />
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Competência <span style={{ color: '#ef4444' }}>*</span></label>
+                            <input required type="month" value={formData.competence} onChange={(e) => setFormData({ ...formData, competence: e.target.value })} style={inputStyle} />
                         </div>
 
                         <div>
@@ -856,7 +913,6 @@ export default function NewInvoicePage() {
                         </div>
                     </div>
 
-                    {/* Installments Grid if count > 1 */}
                     {formData.installmentsCount > 1 && (
                         <div style={{
                             marginTop: '20px',
@@ -892,7 +948,6 @@ export default function NewInvoicePage() {
                     )}
                 </div>
 
-                {/* Parte 2: Itens (só aparece quando tipo = Produtos Estoque) */}
                 {formData.invoice_type === 'product' && (
                     <div style={{ marginBottom: '32px', padding: '24px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -913,11 +968,12 @@ export default function NewInvoicePage() {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                     <thead>
                                         <tr style={{ background: '#fff', borderBottom: '2px solid #e2e8f0' }}>
-                                            <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '14%' }}>Produto</th>
-                                            <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '16%' }}>Modelo</th>
-                                            <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '18%' }}>Plano Financ.</th>
-                                            <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '95px' }}>Capac.</th>
-                                            <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '85px' }}>Grade</th>
+                                            <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '12%' }}>Produto</th>
+                                            <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '13%' }}>Modelo</th>
+                                            <th style={{ padding: '12px 0px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '90px' }}>Capac.</th>
+                                            <th style={{ padding: '12px 0px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '85px' }}>Grade</th>
+                                            <th style={{ padding: '12px 0px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '90px' }}>Lot ID</th>
+                                            <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '15%' }}>Plano Financ.</th>
                                             <th style={{ padding: '12px 8px', textAlign: 'right', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '60px' }}>Qtd</th>
                                             <th style={{ padding: '12px 8px', textAlign: 'right', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '90px' }}>Unitário</th>
                                             <th style={{ padding: '12px 8px', textAlign: 'right', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '100px' }}>Total</th>
@@ -938,17 +994,13 @@ export default function NewInvoicePage() {
                                                 <td style={{ padding: '12px 8px' }}>
                                                     <Combobox
                                                         value={item.product_id}
-                                                        options={models}
+                                                        options={(() => {
+                                                            const selectedTypeName = productTypes.find(t => t.id === item.product_type_id)?.name;
+                                                            if (!selectedTypeName) return [];
+                                                            return models.filter((m: Product) => (m.type || '') === selectedTypeName);
+                                                        })()}
                                                         onChange={(val) => updateItem(item.id, 'product_id', val)}
                                                         placeholder="Modelo..."
-                                                    />
-                                                </td>
-                                                <td style={{ padding: '12px 8px' }}>
-                                                    <Combobox
-                                                        value={item.financial_class_id}
-                                                        options={financialClasses}
-                                                        onChange={(val) => updateItem(item.id, 'financial_class_id', val)}
-                                                        placeholder="Plano..."
                                                     />
                                                 </td>
                                                 <td style={{ padding: '12px 0px' }}>
@@ -982,8 +1034,28 @@ export default function NewInvoicePage() {
                                                         style={{ ...inputStyle, fontSize: '13px', padding: '8px 4px', marginBottom: 0 }}
                                                     >
                                                         <option value="">Selecione...</option>
-                                                        {GRADE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                        {grades.map(g => {
+                                                        const same = !g.name || g.name.trim().toLowerCase() === g.code.trim().toLowerCase();
+                                                        return <option key={g.id} value={g.code}>{same ? g.code : `${g.code} – ${g.name}`}</option>;
+                                                      })}
                                                     </select>
+                                                </td>
+                                                <td style={{ padding: '12px 0px' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={item.lot_id}
+                                                        onChange={(e) => updateItem(item.id, 'lot_id', e.target.value)}
+                                                        placeholder="Lote..."
+                                                        style={{ ...inputStyle, fontSize: '13px', padding: '8px', marginBottom: 0 }}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '12px 8px' }}>
+                                                    <Combobox
+                                                        value={item.financial_class_id}
+                                                        options={financialClasses}
+                                                        onChange={(val) => updateItem(item.id, 'financial_class_id', val)}
+                                                        placeholder="Plano..."
+                                                    />
                                                 </td>
                                                 <td style={{ padding: '12px 8px' }}>
                                                     <input type="number" min="0" step="1" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} style={{ ...inputStyle, fontSize: '13px', padding: '8px', textAlign: 'right', marginBottom: 0 }} />
@@ -1004,7 +1076,7 @@ export default function NewInvoicePage() {
                                     </tbody>
                                     <tfoot>
                                         <tr style={{ borderTop: '2px solid #0f172a' }}>
-                                            <td colSpan={5} style={{ padding: '12px', textAlign: 'right', fontWeight: '700', fontSize: '14px', color: '#0f172a' }}>
+                                            <td colSpan={6} style={{ padding: '12px', textAlign: 'right', fontWeight: '700', fontSize: '14px', color: '#0f172a' }}>
                                                 TOTAL
                                             </td>
                                             <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700', fontSize: '16px', color: '#3B82F6' }}>
@@ -1023,7 +1095,127 @@ export default function NewInvoicePage() {
                     </div>
                 )}
 
-                {/* Parte 3: Observações */}
+                {/* Simplified Items Form for Non-Product Types */}
+                {formData.invoice_type && formData.invoice_type !== 'product' && (
+                    <div style={{ marginBottom: '32px', padding: '24px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                📋 Itens da AP
+                            </h3>
+                            <button type="button" onClick={addItem} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#3B82F6', color: 'white', fontWeight: '600', fontSize: '12px', cursor: 'pointer' }}>
+                                + Adicionar Item
+                            </button>
+                        </div>
+
+                        {items.length === 0 ? (
+                            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                                Clique em "+ Adicionar Item" para incluir itens nesta AP
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '8px' }}>
+                                    <thead>
+                                        <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #e2e8f0' }}>
+                                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>
+                                                Descrição
+                                            </th>
+                                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>
+                                                Plano Financeiro
+                                            </th>
+                                            <th style={{ padding: '12px', textAlign: 'right', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>
+                                                Qtd
+                                            </th>
+                                            <th style={{ padding: '12px', textAlign: 'right', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>
+                                                Unitário
+                                            </th>
+                                            <th style={{ padding: '12px', textAlign: 'right', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>
+                                                Total
+                                            </th>
+                                            <th style={{ padding: '12px', width: '50px' }}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {items.map((item, index) => (
+                                            <tr key={item.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                <td style={{ padding: '12px' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={item.description || ''}
+                                                        onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                                                        placeholder="Descrição do item"
+                                                        style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '12px', minWidth: '200px' }}>
+                                                    <select
+                                                        value={item.account_id || ''}
+                                                        onChange={(e) => updateItem(item.id, 'account_id', e.target.value)}
+                                                        style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                                                    >
+                                                        <option value="">Selecione...</option>
+                                                        {accounts.map((account) => (
+                                                            <option key={account.id} value={account.id}>
+                                                                {account.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td style={{ padding: '12px', textAlign: 'right' }}>
+                                                    <input
+                                                        type="number"
+                                                        value={item.quantity}
+                                                        onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                                                        style={{ width: '80px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', textAlign: 'right' }}
+                                                        min="0"
+                                                        step="1"
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '12px', textAlign: 'right' }}>
+                                                    <input
+                                                        type="number"
+                                                        value={item.unit_cost || 0}
+                                                        onChange={(e) => updateItem(item.id, 'unit_cost', parseFloat(e.target.value) || 0)}
+                                                        style={{ width: '100px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', textAlign: 'right' }}
+                                                        min="0"
+                                                        step="0.01"
+                                                    />
+                                                </td>
+                                                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#059669' }}>
+                                                    ${formatCurrency(item.quantity * (item.unit_cost || 0))}
+                                                </td>
+                                                <td style={{ padding: '12px' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeItem(item.id)}
+                                                        style={{ padding: '6px 10px', border: 'none', background: '#fee2e2', color: '#ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style={{ borderTop: '2px solid #3B82F6', background: '#f8fafc' }}>
+                                            <td colSpan={2} style={{ padding: '12px', textAlign: 'right', fontWeight: '700', fontSize: '14px', color: '#0f172a', textTransform: 'uppercase' }}>
+                                                TOTAL
+                                            </td>
+                                            <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700', fontSize: '16px', color: '#3B82F6' }}>
+                                                {getTotalQuantity()}
+                                            </td>
+                                            <td style={{ padding: '12px', textAlign: 'right' }}></td>
+                                            <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700', fontSize: '16px', color: '#3B82F6' }}>
+                                                ${formatCurrency(getTotalAmount())}
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div style={{ marginBottom: '32px' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         📝 Observações
@@ -1031,7 +1223,6 @@ export default function NewInvoicePage() {
                     <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }} placeholder="Adicione qualquer informação adicional..." />
                 </div>
 
-                {/* Actions */}
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', alignItems: 'center', paddingTop: '24px', borderTop: '1px solid #e2e8f0' }}>
                     {isEdit && (
                         <button
@@ -1053,7 +1244,7 @@ export default function NewInvoicePage() {
                             Excluir AP
                         </button>
                     )}
-                    <Link href="/dashboard/invoices" style={{ padding: '12px 24px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', textDecoration: 'none', fontWeight: '600', fontSize: '14px' }}>
+                    <Link href="/finance/accounts-payable" style={{ padding: '12px 24px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', textDecoration: 'none', fontWeight: '600', fontSize: '14px' }}>
                         Cancelar
                     </Link>
                     <button type="submit" disabled={loading} style={{ padding: '12px 32px', borderRadius: '8px', border: 'none', background: loading ? '#94a3b8' : 'linear-gradient(135deg, #3B82F6 0%, #1e40af 100%)', color: 'white', fontWeight: '600', fontSize: '14px', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.3)' }}>
@@ -1061,6 +1252,7 @@ export default function NewInvoicePage() {
                     </button>
                 </div>
             </form>
+            </div>
         </div>
     );
 }

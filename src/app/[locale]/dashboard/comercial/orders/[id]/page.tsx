@@ -5,13 +5,14 @@ import { useSupabase } from '@/hooks/useSupabase';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useUI } from '@/context/UIContext';
+import { getErrorMessage } from '@/lib/errors';
 
 export default function OrderDetailsPage() {
     const supabase = useSupabase();
     const router = useRouter();
     const params = useParams();
     const { id, locale } = params;
-    const { alert, confirm } = useUI();
+    const { alert, confirm, toast } = useUI();
 
     const [order, setOrder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -30,7 +31,7 @@ export default function OrderDetailsPage() {
             .single();
 
         if (error) {
-            alert('Erro', 'Não foi possível carregar o pedido', 'danger');
+            toast.error('Não foi possível carregar o pedido');
             router.push('/dashboard/comercial/orders');
             return;
         }
@@ -50,7 +51,7 @@ export default function OrderDetailsPage() {
             await alert('Sucesso', `Status atualizado para ${newStatus}`, 'success');
             fetchOrder();
         } else {
-            await alert('Erro', error.message, 'danger');
+            toast.error(getErrorMessage(error));
         }
         setUpdating(false);
     };
@@ -72,7 +73,7 @@ export default function OrderDetailsPage() {
     const currentStatus = statusColors[order.status] || { bg: '#f1f5f9', text: '#64748b', label: order.status.toUpperCase() };
 
     return (
-        <div style={{ padding: '0', minHeight: '100vh', maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ padding: '40px', minHeight: '100vh', maxWidth: '1400px', margin: '0 auto' }}>
             {/* Header */}
             <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
@@ -135,7 +136,7 @@ export default function OrderDetailsPage() {
                     </div>
 
                     {/* Items */}
-                    <div style={{ ...cardStyle, padding: '0', overflow: 'hidden' }}>
+                    <div style={{ ...cardStyle, padding: '40px', overflow: 'hidden' }}>
                         <div style={{ padding: '28px 28px 0 28px' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: 0, marginBottom: '24px' }}>📦 Itens do Pedido</h3>
                         </div>

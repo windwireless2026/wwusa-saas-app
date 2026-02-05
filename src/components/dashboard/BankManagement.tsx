@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useUI } from '@/context/UIContext';
 import { useTranslations } from 'next-intl';
+import { getErrorMessage } from '@/lib/errors';
 
 interface Bank {
     id: string;
@@ -16,7 +17,7 @@ interface Bank {
 
 export default function BankManagement() {
     const supabase = useSupabase();
-    const { alert, confirm } = useUI();
+    const { alert, confirm, toast } = useUI();
     const [banks, setBanks] = useState<Bank[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,7 +65,7 @@ export default function BankManagement() {
                     })
                     .eq('id', editingBank.id);
                 if (error) throw error;
-                await alert('Sucesso', 'Banco atualizado com sucesso!', 'success');
+                toast.success('Banco atualizado com sucesso!');
             } else {
                 const { error } = await supabase.from('banks').insert([formData]);
                 if (error) throw error;
@@ -74,8 +75,8 @@ export default function BankManagement() {
             setEditingBank(null);
             setFormData({ routing_number: '', name: '', country: 'US', swift_code: '' });
             fetchBanks();
-        } catch (error: any) {
-            await alert('Erro', error.message, 'danger');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -97,8 +98,8 @@ export default function BankManagement() {
             if (error) throw error;
             await alert('Sucesso', 'Banco excluído com sucesso!', 'success');
             fetchBanks();
-        } catch (error: any) {
-            await alert('Erro', error.message, 'danger');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error));
         }
     };
 

@@ -5,6 +5,7 @@ import { useSupabase } from '@/hooks/useSupabase';
 import { useRouter, useParams } from 'next/navigation';
 import { useUI } from '@/context/UIContext';
 import Link from 'next/link';
+import { getErrorMessage } from '@/lib/errors';
 
 type Agent = {
     id: string;
@@ -40,11 +41,12 @@ export default function EditEstimatePage() {
     const router = useRouter();
     const params = useParams();
     const { id, locale } = params;
-    const { alert, confirm } = useUI();
+    const { alert, confirm, toast } = useUI();
 
     const [allAgents, setAllAgents] = useState<Agent[]>([]);
     const [salespersons, setSalespersons] = useState<any[]>([]);
     const [catalogModels, setCatalogModels] = useState<string[]>([]);
+    const [availableStock, setAvailableStock] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -69,6 +71,7 @@ export default function EditEstimatePage() {
     const [salespersonId, setSalespersonId] = useState('');
     const [commissionPercent, setCommissionPercent] = useState(0);
     const [status, setStatus] = useState('');
+    const [payAtDestination, setPayAtDestination] = useState(false);
 
     // Ship To
     const [shipToName, setShipToName] = useState('');
@@ -96,7 +99,7 @@ export default function EditEstimatePage() {
             await Promise.all([
                 fetchAgents(),
                 fetchSalespersons(),
-                fetchCatalogModels(),
+                fetchInStockModels(),
                 fetchEstimate()
             ]);
             setLoading(false);
@@ -145,6 +148,7 @@ export default function EditEstimatePage() {
             setItems(data.items.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)));
             setDiscountAmount(data.discount_amount || 0);
             setDeductDiscountFromCommission(data.deduct_discount_from_commission ?? true);
+            setPayAtDestination(data.pay_at_destination ?? false);
             setNotes(data.notes || '');
             setCustomerNotes(data.customer_notes || '');
             setTerms(data.terms || '');
@@ -169,13 +173,17 @@ export default function EditEstimatePage() {
         if (data) setSalespersons(data);
     };
 
-    const fetchCatalogModels = async () => {
+    const fetchInStockModels = async () => {
         const { data } = await supabase
-            .from('product_catalog')
-            .select('name')
-            .order('name');
+            .from('inventory')
+            .select('model, capacity, grade, price')
+            .eq('status', 'Available')
+            .is('deleted_at', null);
+
         if (data) {
-            const uniqueModels = [...new Set(data.map((p: any) => p.name))] as string[];
+            setAvailableStock(data);
+            const combined = data.map((item: any) => `${item.model} ${item.capacity}`);
+            const uniqueModels = [...new Set(combined)].sort() as string[];
             setCatalogModels(uniqueModels);
         }
     };
@@ -251,6 +259,23 @@ export default function EditEstimatePage() {
 
             let updatedItem = { ...item, [field]: val };
 
+            // Logic for Model selection and Auto-Cost
+            if (field === 'model') {
+                const stockMatch = availableStock.find(s => `${s.model} ${s.capacity}` === value);
+                if (stockMatch) {
+                    const sameModels = availableStock.filter(s => s.model === stockMatch.model && s.capacity === stockMatch.capacity);
+                    const avgCost = sameModels.reduce((acc, curr) => acc + (curr.price || 0), 0) / sameModels.length;
+
+                    updatedItem = {
+                        ...updatedItem,
+                        model: stockMatch.model,
+                        capacity: stockMatch.capacity,
+                        cost_price: avgCost,
+                        unit_price: Math.round(avgCost * (1 + (item.margin_percent / 100)) * 100) / 100
+                    };
+                }
+            }
+
             // Logic for Margin calculation
             if (field === 'margin_percent') {
                 const margin = parseFloat(value) || 0;
@@ -307,6 +332,7 @@ export default function EditEstimatePage() {
                     salesperson_id: salespersonId,
                     commission_percent: commissionPercent,
                     deduct_discount_from_commission: deductDiscountFromCommission,
+                    pay_at_destination: payAtDestination,
                     discount_amount: discountAmount,
                     status: status,
                     bill_to_name: billToName,
@@ -323,7 +349,7 @@ export default function EditEstimatePage() {
                     ship_to_country: shipToCountry,
                     ship_to_phone: shipToPhone,
                     subtotal: subtotal,
-                    total: subtotal,
+                    total: subtotal - discountAmount,
                     notes: notes,
                     customer_notes: customerNotes,
                     terms: terms,
@@ -360,11 +386,11 @@ export default function EditEstimatePage() {
 
             if (itemsError) throw itemsError;
 
-            await alert('Sucesso', 'Estimate atualizado!', 'success');
+            toast.success('Estimate atualizado!');
             router.refresh();
 
-        } catch (error: any) {
-            await alert('Erro', error.message, 'danger');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error));
         } finally {
             setSaving(false);
         }
@@ -380,70 +406,20 @@ export default function EditEstimatePage() {
 
         setSaving(true);
         try {
-            const subtotal = calculateSubtotal();
-            const total = subtotal - discountAmount;
+            // Chamada atômica via RPC (Database Function)
+            const { data: newOrderId, error } = await supabase.rpc('convert_estimate_to_order', {
+                target_estimate_id: id
+            });
 
-            // 1. Create Sales Order
-            const { data: order, error: orderError } = await supabase
-                .from('sales_orders')
-                .insert({
-                    estimate_id: id,
-                    customer_id: customerId,
-                    salesperson_id: salespersonId || (await supabase.auth.getUser()).data.user?.id,
-                    commission_percent: commissionPercent,
-                    deduct_discount_from_commission: deductDiscountFromCommission,
-                    subtotal: subtotal,
-                    discount_amount: discountAmount,
-                    total: total,
-                    status: 'approved', // Pedido aprovado logo de cara
-                    ship_to_name: shipToName,
-                    ship_to_address: shipToAddress,
-                    ship_to_city: shipToCity,
-                    ship_to_state: shipToState,
-                    ship_to_zip: shipToZip,
-                    ship_to_country: shipToCountry,
-                    ship_to_phone: shipToPhone,
-                    notes: notes,
-                    shipping_notes: customerNotes
-                })
-                .select()
-                .single();
-
-            if (orderError) throw orderError;
-
-            // 2. Create Sales Order Items
-            const orderItems = items.map((item, index) => ({
-                order_id: order.id,
-                model: item.model,
-                capacity: item.capacity,
-                grade: item.grade,
-                description: item.description,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
-                cost_price: item.cost_price,
-                margin_percent: item.margin_percent,
-                sort_order: index
-            }));
-
-            const { error: itemsError } = await supabase
-                .from('sales_order_items')
-                .insert(orderItems);
-
-            if (itemsError) throw itemsError;
-
-            // 3. Update Estimate Status
-            const { error: estUpdateError } = await supabase
-                .from('estimates')
-                .update({ status: 'converted' })
-                .eq('id', id);
-
-            if (estUpdateError) throw estUpdateError;
+            if (error) throw error;
 
             await alert('Sucesso', 'Estimate aprovado e convertido em Order!', 'success');
-            router.push(`/dashboard/comercial/orders/${order.id}`); // Redireciona para a nova order
 
-        } catch (error: any) {
-            await alert('Erro ao converter', error.message, 'danger');
+            // Redireciona para a nova order (se existir rota de orders, se não volta para a lista)
+            router.push('/dashboard/comercial/estimates');
+
+        } catch (error: unknown) {
+            toast.error('Erro ao converter: ' + getErrorMessage(error));
         } finally {
             setSaving(false);
         }
@@ -457,7 +433,7 @@ export default function EditEstimatePage() {
     if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Carregando...</div>;
 
     return (
-        <div style={{ padding: '0', minHeight: '100vh', maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ padding: '40px', minHeight: '100vh', maxWidth: '1400px', margin: '0 auto' }}>
             <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                     <div style={{
@@ -591,7 +567,12 @@ export default function EditEstimatePage() {
                         <div style={{ ...cardStyle, background: '#0f172a', color: 'white' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                                 <span style={{ opacity: 0.7 }}>SUBTOTAL:</span>
-                                <span style={{ fontSize: '18px', fontWeight: '700' }}>${calculateSubtotal().toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <span style={{ padding: '4px 10px', background: payAtDestination ? '#0ea5e9' : '#7c3aed', borderRadius: '100px', fontSize: '10px', fontWeight: '950' }}>
+                                        {payAtDestination ? '📦 DESTINO' : '🇺🇸 ORIGEM'}
+                                    </span>
+                                    <span style={{ fontSize: '18px', fontWeight: '700' }}>${calculateSubtotal().toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                </div>
                             </div>
                             {discountAmount > 0 && (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#f87171' }}>
@@ -626,13 +607,40 @@ export default function EditEstimatePage() {
                             </div>
 
                             {discountAmount > 0 && (
-                                <div style={{ padding: '12px', background: '#fff1f2', borderRadius: '8px', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ padding: '12px', background: '#fff1f2', borderRadius: '8px', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                                     <input type="checkbox" id="deductEdit" checked={deductDiscountFromCommission} onChange={e => setDeductDiscountFromCommission(e.target.checked)} disabled={status === 'converted'} />
                                     <label htmlFor="deductEdit" style={{ fontSize: '11px', fontWeight: '700', color: '#991b1b', cursor: 'pointer' }}>
                                         Abater desconto da comissão?
                                     </label>
                                 </div>
                             )}
+
+                            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+                                <label style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '8px' }}>🌍 LOCAL DE PAGAMENTO</label>
+                                <button
+                                    type="button"
+                                    onClick={() => setPayAtDestination(!payAtDestination)}
+                                    disabled={status === 'converted'}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: '10px',
+                                        border: payAtDestination ? '2px solid #0ea5e9' : '1px solid #7c3aed',
+                                        background: payAtDestination ? '#f0f9ff' : 'white',
+                                        cursor: status === 'converted' ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '10px',
+                                        transition: 'all 0.2s',
+                                        fontWeight: '800',
+                                        fontSize: '13px',
+                                        color: payAtDestination ? '#0369a1' : '#7c3aed'
+                                    }}
+                                >
+                                    {payAtDestination ? '📦 PAGAMENTO NO DESTINO' : '🇺🇸 PAGAMENTO NA ORIGEM'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
+import { useGrades } from '@/hooks/useGrades';
 import { useUI } from '@/context/UIContext';
+import { getErrorMessage } from '@/lib/errors';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -24,20 +26,6 @@ const CAPACITIES = [
   '42mm',
   '46mm',
 ];
-const GRADES = [
-  'As-Is',
-  'LACRADO',
-  'A',
-  'A-',
-  'AB',
-  'B',
-  'Blocked',
-  'C',
-  'Open Box',
-  'RMA',
-  'RMA-Returns',
-  'RR',
-];
 const COLORS = [
   'Mix',
   'Amarelo',
@@ -57,9 +45,10 @@ const COLORS = [
 ];
 
 export default function AddItemModal({ isOpen, onClose, onSuccess, item }: AddItemModalProps) {
-  const supabase = useSupabase(); // Hook com instância única
+  const supabase = useSupabase();
+  const { grades } = useGrades();
   const [loading, setLoading] = useState(false);
-  const { alert, confirm } = useUI();
+  const { alert, confirm, toast } = useUI();
   const [productTypes, setProductTypes] = useState<
     { id: string; name: string; tracking_method: string; icon: string | null }[]
   >([]);
@@ -347,8 +336,8 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, item }: AddIt
         item?.id ? 'Item atualizado com sucesso!' : 'Item adicionado ao estoque!',
         'success'
       );
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao salvar item: ' + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error('Erro ao salvar item: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -377,8 +366,8 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, item }: AddIt
       await alert('Sucesso', 'Item excluído com sucesso!', 'success');
       onSuccess();
       onClose();
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao excluir item: ' + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error('Erro ao excluir item: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -815,11 +804,14 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, item }: AddIt
                 }}
               >
                 <option value="">Selecione...</option>
-                {GRADES.map(opt => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
+                {grades.map(g => {
+                  const same = !g.name || g.name.trim().toLowerCase() === g.code.trim().toLowerCase();
+                  return (
+                    <option key={g.id} value={g.code}>
+                      {same ? g.code : `${g.code} – ${g.name}`}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>

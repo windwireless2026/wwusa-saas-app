@@ -83,7 +83,19 @@
       "viewProfile": "Ver Perfil",
       "settings": "Configurações",
       "logout": "Sair da conta",
-      "language": "Idioma"
+      "language": "Idioma",
+      "systemModule": "Sistema",
+      "docs": "Documentação Técnica",
+      "operationsSettings": "Configurações Operacionais",
+      "financialSettings": "Configurações Financeiras",
+      "costCenters": "Centro de Custo",
+      "chartOfAccounts": "Chart of Accounts",
+      "financialClasses": "Classes Financeiras",
+      "financialGroups": "Grupos Financeiros",
+      "bankAccounts": "Contas Bancárias",
+      "partnersModule": "Sócios",
+      "partnersDashboard": "Dashboard",
+      "partnersHistory": "Evolução Histórica"
     },
     "Registration": {
       "title": "Central de Cadastro",
@@ -194,6 +206,7 @@
         "actions": "Ações"
       },
       "newButton": "Novo Agente",
+      "addNew": "Novo Agente",
       "editTitle": "Editar Agente",
       "form": {
         "country": "País / Jurisdição",
@@ -210,10 +223,16 @@
         "financialClass": "Classe Financeira Padrão (Sugestão para APs)",
         "searchPlaceholder": "🔍 Digite para pesquisar...",
         "clearSelection": "Limpar seleção",
+        "noResults": "Nenhum resultado",
         "commercialSettings": "Configurações Comerciais",
         "profile": "Perfil",
         "attach": "Anexar",
         "alreadyAttached": "Já anexado",
+        "viewDocument": "Visualizar",
+        "person_types": {
+          "individual": "Pessoa Física",
+          "entity": "Pessoa Jurídica"
+        },
         "categories": {
           "comercial": "Comercial",
           "operacional": "Operacional",
@@ -225,6 +244,7 @@
           "fornecedor_estoque": "Fornecedor (Estoque)",
           "frete": "Frete / Logística",
           "transportadora_cliente": "Transportadora (Exempt)",
+          "freteiro": "Freteiro",
           "prestador": "Prestador de Serviço",
           "suprimentos": "Suprimentos & Compras",
           "utilidades": "Utilidades (Aluguel/Fixo)",
@@ -249,7 +269,40 @@
           "confirmDelete": "Tem certeza que deseja excluir o agente \"{name}\"?",
           "confirmDeleteTitle": "Excluir Agente",
           "syncWarning": "Salvo (Sincronizado)"
-        }
+        },
+        "contact_person": "Pessoa de Contato",
+        "email": "Email",
+        "phone": "Telefone",
+        "website": "Site / Website",
+        "address_full": "Endereço Completo",
+        "zip": "CEP / ZIP",
+        "street": "Logradouro / Rua",
+        "city": "Cidade",
+        "state": "Estado / UF",
+        "banking_title": "Dados Bancários e Fiscais",
+        "nature_payment": "Natureza: Pagamentos",
+        "reg_doc": "Documento Regulatório",
+        "routing": "Routing Number",
+        "account": "Conta / Account #",
+        "account_type": "Tipo de Conta",
+        "bank_name": "Nome do Banco",
+        "bank_holder": "Titular da Conta",
+        "alt_payment": "Métodos Alternativos",
+        "pix": "Chave PIX",
+        "zelle": "Zelle Email/Phone",
+        "paypal": "PayPal Email",
+        "wire_intl": "Wire Internacional (SWIFT/IBAN)",
+        "comm_default": "Comissão Padrão (%)",
+        "credit_limit": "Limite de Crédito ($)",
+        "payment_terms": "Condição de Pagamento",
+        "status_resale": "Status do Resale Certificate (RC)",
+        "rc_number": "Número do RC",
+        "rc_year": "Ano/Exercício",
+        "status_dr14": "Status do Forwarding Agent (DR-14)",
+        "save": "Salvar Agente",
+        "saveEdit": "Salvar Alterações",
+        "fiscal_docs_title": "Documentação Fiscal (DR-14 / Isenção)",
+        "financial_params": "Parâmetros Financeiros & Comissão"
       },
       "filters": {
         "active": "Ativos",
@@ -313,12 +366,13 @@
       "messages": {
         "successAdd": "Local criado com sucesso!",
         "successUpdate": "Local atualizado com sucesso!",
-        "successRestore": "Local restaurado!",
+        "successRestore": "Local reativado!",
         "errorSave": "Erro ao salvar local: ",
-        "errorDelete": "Erro ao excluir: ",
-        "errorRestore": "Erro ao restaurar: ",
-        "confirmDelete": "Deseja enviar \"{name}\" para a lixeira?",
-        "deleteTitle": "Excluir Local"
+        "errorDelete": "Erro ao inativar: ",
+        "errorRestore": "Erro ao reativar: ",
+        "confirmDelete": "Deseja inativar o local \"{name}\"?",
+        "deleteTitle": "Inativar Local",
+        "successDelete": "Local inativado com sucesso!"
       }
     },
     "Inventory": {

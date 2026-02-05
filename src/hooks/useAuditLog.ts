@@ -29,8 +29,7 @@ export function useAuditLog() {
                     entity_id: params.entity_id,
                     old_data: params.old_data,
                     new_data: params.new_data,
-                    details: params.details,
-                    created_at: new Date().toISOString()
+                    details: params.details
                 });
 
             if (error) {

@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useUI } from '@/context/UIContext';
+import { getErrorMessage } from '@/lib/errors';
+import { matchModelAndCapacity } from '@/lib/modelNameCanonical';
 
 interface StockEntryWizardProps {
     isOpen: boolean;
@@ -31,6 +33,7 @@ interface InvoiceItem {
     model_name?: string;
     capacity?: string;
     grade?: string;
+    lot_id?: string;
 }
 
 interface ParsedItem {
@@ -48,41 +51,17 @@ interface ParsedItem {
 
 export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEntryWizardProps) {
     const supabase = useSupabase();
-    const { alert, confirm } = useUI();
+    const { alert, confirm, toast } = useUI();
     const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
 
-    // Helper function to normalize model names for comparison
-    // Converts "IPHONE 16 PRO MAX" to "iphone16promax"
-    const normalizeModelName = (name: string): string => {
-        return name
-            .toLowerCase()
-            .replace(/\s+/g, '')      // Remove spaces
-            .replace(/-/g, '')        // Remove hyphens
-            .replace(/[^a-z0-9]/g, '') // Remove special chars
-            .trim();
-    };
-
-    // Helper function to match spreadsheet model+capacity with invoice model+capacity
+    // Match planilha ↔ item da AP: usa canonicalização (ex.: "IPHONE SE2 64GB (2020)" ↔ "iPhone SE (2ª geração) 64GB")
     const matchModels = (
         spreadsheetModel: string,
         spreadsheetCapacity: string,
         invoiceModel: string,
         invoiceCapacity: string
-    ): boolean => {
-        const normSpreadsheet = normalizeModelName(spreadsheetModel);
-        const normInvoice = normalizeModelName(invoiceModel);
-        const normSpreadCap = normalizeModelName(spreadsheetCapacity);
-        const normInvCap = normalizeModelName(invoiceCapacity);
-
-        // Match model names (without capacity)
-        const modelMatch = normSpreadsheet === normInvoice;
-
-        // Match capacity
-        const capacityMatch = normSpreadCap === normInvCap;
-
-        return modelMatch && capacityMatch;
-    };
+    ): boolean => matchModelAndCapacity(spreadsheetModel, spreadsheetCapacity, invoiceModel, invoiceCapacity);
 
     // Data for Step 0
     const [agents, setAgents] = useState<Agent[]>([]);
@@ -99,9 +78,35 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
     const [fileName, setFileName] = useState('');
     const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
 
+    // Automation Data
+    const [customers, setCustomers] = useState<Agent[]>([]);
+
     // Data for T-Mobile Lot Mapping (Step 2.5)
     const [uniqueLots, setUniqueLots] = useState<string[]>([]);
-    const [lotMappings, setLotMappings] = useState<Record<string, { locationId: string; unitPrice: number }>>({});
+    const [lotMappings, setLotMappings] = useState<Record<string, { locationId: string; backToBack?: boolean; customerId?: string }>>({});
+
+    // Price lookup helper
+    const getPriceForItem = (item: { model: string; capacity: string; lotId?: string; price?: number }) => {
+        // 1. Try matching by Lot ID
+        if (item.lotId && invoiceItems.length > 0) {
+            const cleanLot = item.lotId.trim().toLowerCase();
+            const matchByLot = invoiceItems.find(ii =>
+                ii.lot_id?.trim().toLowerCase() === cleanLot
+            );
+            if (matchByLot) return matchByLot.unit_price;
+        }
+
+        // 2. Try matching by Model + Capacity
+        if (invoiceItems.length > 0) {
+            const matchByModel = invoiceItems.find(ii =>
+                matchModels(item.model, item.capacity, ii.model_name || '', ii.capacity || '')
+            );
+            if (matchByModel) return matchByModel.unit_price;
+        }
+
+        // 3. Fallback to spreadsheet price
+        return item.price || 0;
+    };
 
     // Refs
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -111,6 +116,7 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
         if (isOpen) {
             fetchAgents();
             fetchStockLocations();
+            fetchCustomers();
             setStep(0);
             setSelectedAgent('');
             setSelectedInvoiceId('');
@@ -155,6 +161,16 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
             .is('deleted_at', null)
             .order('name');
         if (data) setStockLocations(data);
+    };
+
+    const fetchCustomers = async () => {
+        const { data } = await supabase
+            .from('agents')
+            .select('id, name')
+            .contains('roles', ['cliente'])
+            .is('deleted_at', null)
+            .order('name');
+        if (data) setCustomers(data);
     };
 
     const fetchInvoices = async (agentId: string) => {
@@ -232,7 +248,7 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
                     grade: item.grade || ''
                 })));
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('❌ Erro fatal ao buscar itens:', err);
         } finally {
             setLoading(false);
@@ -317,21 +333,20 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
                         model = auctionModel;
                     }
 
-                    // Extract capacity from model if it's embedded (e.g., "IPHONE 16 128GB" → model: "IPHONE 16", capacity: "128GB")
-                    // This handles both "128GB" at the end and capacity with space like "128 GB"
+                    // Extract capacity from model if embedded (e.g. "IPHONE 16 128GB" or "IPHONE SE2 64GB (2020)")
+                    // Match XXgb/XX GB anywhere in the string, not only at the end
                     if (model && !capacity) {
-                        const capacityMatch = model.match(/\s+(\d+\s*(?:GB|TB))$/i);
+                        const capacityMatch = model.match(/(\d+\s*(?:GB|TB))/i);
                         if (capacityMatch) {
                             capacity = capacityMatch[1].replace(/\s/g, '').toUpperCase();
-                            model = model.replace(capacityMatch[0], '').trim();
+                            model = model.replace(capacityMatch[0], '').replace(/\s+/g, ' ').trim();
                         }
                     }
 
-                    // Also handle if capacity was found but model still has it embedded
+                    // Also remove capacity from model if it appears in the string (e.g. column had "64GB" but model had "IPHONE SE2 64GB (2020)")
                     if (model && capacity) {
-                        // Remove capacity from model if still present
-                        const capRegex = new RegExp('\\s*' + capacity.replace(/\s/g, '\\s*') + '\\s*$', 'i');
-                        model = model.replace(capRegex, '').trim();
+                        const capRegex = new RegExp('\\s*' + capacity.replace(/\s/g, '\\s*') + '\\s*', 'gi');
+                        model = model.replace(capRegex, ' ').replace(/\s+/g, ' ').trim();
                     }
 
                     console.log('📋 Parsed row:', { original: findVal(['modelo', 'model', 'auction model', 'auctionmodel']), model, capacity });
@@ -360,9 +375,9 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
 
                 // Initialize lot mappings with empty values
                 if (lots.length > 0) {
-                    const initialMappings: Record<string, { locationId: string; unitPrice: number }> = {};
+                    const initialMappings: Record<string, { locationId: string }> = {};
                     lots.forEach(lot => {
-                        initialMappings[lot] = { locationId: '', unitPrice: 0 };
+                        initialMappings[lot] = { locationId: '' };
                     });
                     setLotMappings(initialMappings);
                 }
@@ -371,8 +386,8 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
 
                 // If we have lots, go to lot mapping step (2), otherwise go to review (3)
                 setStep(lots.length > 0 ? 2 : 3);
-            } catch (err: any) {
-                alert('Erro', 'Não foi possível ler o arquivo: ' + err.message, 'danger');
+            } catch (err: unknown) {
+                toast.error('Não foi possível ler o arquivo: ' + getErrorMessage(err));
             }
         };
         reader.readAsBinaryString(file);
@@ -384,41 +399,125 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
             const selectedInvoice = invoices.find(i => i.id === selectedInvoiceId);
             const { data: { user } } = await supabase.auth.getUser();
 
+            // Por lote: customerId -> estimateId (para linked_estimate_id nos itens)
+            const estimateIdByCustomer: Record<string, string> = {};
+
+            // Automation: Back-to-Back por cliente (uma estimate + invoice por cliente que tem lotes B2B)
+            const b2bCustomerIds = [...new Set(
+                uniqueLots
+                    .filter(lot => lotMappings[lot]?.backToBack && lotMappings[lot]?.customerId)
+                    .map(lot => lotMappings[lot]!.customerId!)
+            )];
+
+            for (const customerId of b2bCustomerIds) {
+                const itemsForCustomer = parsedItems.filter(
+                    item => item.lotId && lotMappings[item.lotId]?.backToBack && lotMappings[item.lotId]?.customerId === customerId
+                );
+                if (itemsForCustomer.length === 0) continue;
+
+                const totalCost = itemsForCustomer.reduce((sum, item) => sum + getPriceForItem(item), 0);
+                const totalAmount = totalCost * 1.2;
+                const firstLotId = itemsForCustomer[0]?.lotId;
+                const locationId = firstLotId ? lotMappings[firstLotId]?.locationId : null;
+
+                // Nota: stock_location_id não é enviado para compatibilidade com schemas onde a coluna ainda não existe (migration 103/085).
+                const { data: estimate, error: estError } = await supabase
+                    .from('estimates')
+                    .insert({
+                        customer_id: customerId,
+                        subtotal: totalAmount,
+                        total: totalAmount,
+                        status: 'approved',
+                        created_by: user?.id,
+                        notes: `Gerado automaticamente via Back-to-Back (Referência: ${selectedInvoice?.invoice_number})`
+                    })
+                    .select()
+                    .single();
+                if (estError) throw estError;
+                if (!estimate?.id) throw new Error('Falha ao criar cotação (estimate).');
+                estimateIdByCustomer[customerId] = estimate.id;
+
+                const FIXED_DESCRIPTION = 'UNLOCKED (AUCTION - NO TEST - NO WARRANTY)';
+                const groupedItems: Record<string, any> = {};
+                itemsForCustomer.forEach(item => {
+                    const priceValue = getPriceForItem(item);
+                    const key = `${item.model}-${item.capacity}-${item.grade}`;
+                    if (!groupedItems[key]) {
+                        const unitPrice = priceValue * 1.2;
+                        const costPrice = priceValue;
+                        const marginPercent = costPrice > 0 ? ((unitPrice - costPrice) / costPrice) * 100 : 0;
+                        groupedItems[key] = {
+                            estimate_id: estimate.id,
+                            model: item.model,
+                            capacity: item.capacity,
+                            grade: item.grade,
+                            description: FIXED_DESCRIPTION,
+                            quantity: 0,
+                            unit_price: unitPrice,
+                            cost_price: costPrice,
+                            margin_percent: marginPercent,
+                        };
+                    }
+                    groupedItems[key].quantity += 1;
+                });
+                const { error: estItemsError } = await supabase.from('estimate_items').insert(Object.values(groupedItems));
+                if (estItemsError) throw estItemsError;
+
+                // Garantir total no estimate (trigger pode não ter rodado ou estar ausente)
+                const itemsSum = Object.values(groupedItems).reduce((s, row) => s + (row.quantity || 0) * (row.unit_price || 0), 0);
+                await supabase.from('estimates').update({ subtotal: itemsSum, total: itemsSum }).eq('id', estimate.id);
+
+                const { error: invError } = await supabase.from('invoices').insert({
+                    agent_id: customerId,
+                    invoice_number: `B2B-${Date.now().toString().slice(-6)}`,
+                    amount: totalAmount,
+                    invoice_date: entryDate,
+                    due_date: entryDate,
+                    status: 'pending',
+                    is_receivable: true,
+                    created_by: user?.id,
+                    notes: `Fatura automática Back-to-Back | Origem AP: ${selectedInvoice?.invoice_number}`
+                });
+                if (invError) throw invError;
+            }
+
             const itemsToInsert = parsedItems.map((item: ParsedItem) => {
-                // Get lot mapping if exists
                 const lotMapping = item.lotId ? lotMappings[item.lotId] : null;
+                const priceValue = getPriceForItem(item);
+                const isB2B = !!(lotMapping?.backToBack && lotMapping?.customerId);
+                const linkedEstimateId = isB2B && lotMapping?.customerId ? estimateIdByCustomer[lotMapping.customerId] : null;
 
                 return {
                     model: item.model,
                     capacity: item.capacity,
                     color: item.color,
                     grade: item.grade,
-                    price: lotMapping?.unitPrice || item.price,
+                    price: priceValue,
                     imei: item.imei || null,
                     serial_number: item.serial_number || null,
                     purchase_invoice: selectedInvoice?.invoice_number || null,
                     agent_id: selectedAgent || null,
                     location_id: lotMapping?.locationId || null,
-                    status: 'Available',
+                    status: isB2B ? 'Reserved' : 'Available',
+                    reserved_for_customer_id: isB2B ? lotMapping?.customerId || null : null,
+                    linked_estimate_id: linkedEstimateId,
                     created_by: user?.id,
                     entry_date: entryDate
                 };
             });
 
-            console.log('📦 Inserting items:', { count: itemsToInsert.length, sample: itemsToInsert[0] });
+            console.log('📦 Inserindo itens no inventário:', itemsToInsert.length);
+            const { error: inventoryError } = await supabase.from('inventory').insert(itemsToInsert);
+            if (inventoryError) throw inventoryError;
 
-            const { data, error } = await supabase.from('inventory').insert(itemsToInsert).select();
-
-            console.log('📦 Insert result:', { data, error });
-
-            if (error) throw error;
-
-            await alert('Sucesso', `${itemsToInsert.length} itens inseridos com sucesso!`, 'success');
+            const b2bCount = b2bCustomerIds.length;
+            await alert('Sucesso', `${itemsToInsert.length} itens inseridos com sucesso! ${b2bCount > 0 ? `(Back-to-Back: ${b2bCount} cliente(s))` : ''}`, 'success');
             onSuccess();
             onClose();
-        } catch (error: any) {
-            console.error('❌ Insert error:', error);
-            await alert('Erro', error.message, 'danger');
+        } catch (error: unknown) {
+            const msg = getErrorMessage(error);
+            console.error('❌ Erro na finalização:', error instanceof Error ? error : msg, error);
+            toast.error(msg || 'Erro ao confirmar entrada de estoque.');
         } finally {
             setLoading(false);
         }
@@ -427,9 +526,10 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
     if (!isOpen) return null;
 
     const selectedInvoice = invoices.find(i => i.id === selectedInvoiceId);
+
+    // Dynamic price calculation for summary
     const totalParsedValue = parsedItems.reduce((sum: number, item: ParsedItem) => {
-        const lotMapping = item.lotId ? lotMappings[item.lotId] : null;
-        return sum + (lotMapping?.unitPrice || item.price);
+        return sum + getPriceForItem(item);
     }, 0);
     const diffValue = totalParsedValue - (selectedInvoice?.amount || 0);
 
@@ -521,6 +621,10 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
                                 </p>
                             </div>
 
+                            <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+                                    As opções de automação (Back-to-Back e Cliente destino) são configuradas <b>por lote</b> no passo &quot;Mapeamento de Lotes&quot;.
+                                </p>
+
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
                                 <button
                                     onClick={() => setStep(1)}
@@ -593,21 +697,22 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
                         <div style={{ display: 'grid', gap: '24px' }}>
                             <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                                 <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: '#475569' }}>
-                                    3. MAPEAMENTO DE LOTES
+                                    3. MAPEAMENTO DE LOTES E OPÇÕES DE AUTOMAÇÃO
                                 </h3>
                                 <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>
-                                    Encontramos {uniqueLots.length} lotes únicos. Configure o local e preço de cada um:
+                                    Configure o local de cada lote e, se quiser, Back-to-Back (reserva para cliente) por lote:
                                 </p>
 
                                 <div style={{ display: 'grid', gap: '12px' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', gap: '12px', fontWeight: '700', fontSize: '11px', color: '#64748b', textTransform: 'uppercase' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 1fr', gap: '12px', fontWeight: '700', fontSize: '11px', color: '#64748b', textTransform: 'uppercase' }}>
                                         <div>LOT ID</div>
                                         <div>LOCAL DO ESTOQUE *</div>
-                                        <div>PREÇO UNITÁRIO *</div>
+                                        <div>B2B</div>
+                                        <div>CLIENTE DESTINO</div>
                                     </div>
 
                                     {uniqueLots.map(lot => (
-                                        <div key={lot} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', gap: '12px', alignItems: 'center' }}>
+                                        <div key={lot} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 1fr', gap: '12px', alignItems: 'center' }}>
                                             <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b', background: '#e2e8f0', padding: '10px 12px', borderRadius: '8px' }}>
                                                 {lot}
                                                 <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>
@@ -627,21 +732,32 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
                                                     <option key={loc.id} value={loc.id}>{loc.name}</option>
                                                 ))}
                                             </select>
-                                            <div style={{ position: 'relative' }}>
-                                                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>$</span>
+                                            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
                                                 <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    placeholder="0.00"
-                                                    value={lotMappings[lot]?.unitPrice || ''}
+                                                    type="checkbox"
+                                                    checked={!!lotMappings[lot]?.backToBack}
                                                     onChange={(e) => setLotMappings(prev => ({
                                                         ...prev,
-                                                        [lot]: { ...prev[lot], unitPrice: parseFloat(e.target.value) || 0 }
+                                                        [lot]: { ...prev[lot], locationId: prev[lot]?.locationId || '', backToBack: e.target.checked, customerId: e.target.checked ? prev[lot]?.customerId : '' }
                                                     }))}
-                                                    style={{ ...inputStyle, paddingLeft: '28px' }}
+                                                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                                                 />
-                                            </div>
+                                                B2B
+                                            </label>
+                                            <select
+                                                value={lotMappings[lot]?.customerId || ''}
+                                                onChange={(e) => setLotMappings(prev => ({
+                                                    ...prev,
+                                                    [lot]: { ...prev[lot], customerId: e.target.value }
+                                                }))}
+                                                disabled={!lotMappings[lot]?.backToBack}
+                                                style={{ ...inputStyle, opacity: lotMappings[lot]?.backToBack ? 1 : 0.6 }}
+                                            >
+                                                <option value="">{lotMappings[lot]?.backToBack ? 'Selecione...' : '—'}</option>
+                                                {customers.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     ))}
                                 </div>
@@ -651,10 +767,10 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
                                 <button onClick={() => setStep(1)} style={secondaryBtn}>Voltar</button>
                                 <button
                                     onClick={() => setStep(3)}
-                                    disabled={!uniqueLots.every(lot => lotMappings[lot]?.locationId && lotMappings[lot]?.unitPrice > 0)}
+                                    disabled={!uniqueLots.every(lot => lotMappings[lot]?.locationId)}
                                     style={{
                                         ...primaryBtn,
-                                        opacity: !uniqueLots.every(lot => lotMappings[lot]?.locationId && lotMappings[lot]?.unitPrice > 0) ? 0.5 : 1
+                                        opacity: !uniqueLots.every(lot => lotMappings[lot]?.locationId) ? 0.5 : 1
                                     }}
                                 >
                                     Continuar Para Revisão →
@@ -665,6 +781,30 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
 
                     {step === 3 && (
                         <div style={{ display: 'grid', gap: '24px' }}>
+                            {(() => {
+                                const b2bLots = uniqueLots.filter(lot => lotMappings[lot]?.backToBack && lotMappings[lot]?.customerId);
+                                const byCustomer = b2bLots.reduce<Record<string, number>>((acc, lot) => {
+                                    const cid = lotMappings[lot]!.customerId!;
+                                    acc[cid] = (acc[cid] || 0) + parsedItems.filter(p => p.lotId === lot).length;
+                                    return acc;
+                                }, {});
+                                if (Object.keys(byCustomer).length === 0) return null;
+                                return (
+                                    <div style={{ padding: '20px', background: '#f5f3ff', borderRadius: '16px', border: '1px solid #7c3aed', marginBottom: '-8px' }}>
+                                        <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#1e293b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            🎯 Venda Back-to-Back por lote
+                                        </h4>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                                            {Object.entries(byCustomer).map(([cid, qty]) => (
+                                                <span key={cid} style={{ fontSize: '13px', color: '#6d28d9', fontWeight: '500', background: 'rgba(124,58,237,0.15)', padding: '6px 12px', borderRadius: '8px' }}>
+                                                    <b>{customers.find(c => c.id === cid)?.name}</b>: {qty} itens (RESERVADO)
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
                             {/* Reconciliation Cards */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                                 <div style={statCard}>
@@ -691,12 +831,20 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
                                 <div style={{ display: 'grid', gap: '8px' }}>
                                     {invoiceItems.map((invItem: InvoiceItem) => {
                                         const actualQty = parsedItems.filter((p: ParsedItem) => {
-                                            return matchModels(
+                                            const modelMatch = matchModels(
                                                 p.model,
                                                 p.capacity,
                                                 invItem.model_name || '',
                                                 invItem.capacity || ''
                                             );
+                                            if (!modelMatch) return false;
+                                            // Se o item da AP tem lote, contar só itens da planilha com o mesmo lote
+                                            if (invItem.lot_id) {
+                                                const lotPlanilha = (p.lotId || '').trim().toLowerCase();
+                                                const lotAP = invItem.lot_id.trim().toLowerCase();
+                                                return lotPlanilha === lotAP;
+                                            }
+                                            return true;
                                         }).length;
                                         const isMismatch = actualQty !== invItem.quantity;
 
@@ -710,6 +858,7 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
                                                         {invItem.model_name} {invItem.capacity && <span style={{ color: '#7c3aed' }}>{invItem.capacity}</span>}
                                                     </div>
                                                     <div style={{ fontSize: '11px', color: '#64748b' }}>
+                                                        {invItem.lot_id && <span style={{ color: '#7c3aed', fontWeight: 'bold' }}>Lote: {invItem.lot_id} | </span>}
                                                         Grade: {invItem.grade || '---'} | Unitário: ${invItem.unit_price}
                                                     </div>
                                                 </div>
@@ -746,9 +895,9 @@ export default function StockEntryWizard({ isOpen, onClose, onSuccess }: StockEn
                                     </thead>
                                     <tbody>
                                         {parsedItems.slice(0, 10).map((item: ParsedItem, idx: number) => {
-                                            const lotMapping = lotMappings[item.lotId];
+                                            const lotMapping = item.lotId ? lotMappings[item.lotId] : null;
                                             const location = stockLocations.find(l => l.id === lotMapping?.locationId);
-                                            const price = lotMapping?.unitPrice || item.price;
+                                            const price = getPriceForItem(item);
 
                                             return (
                                                 <tr key={idx} style={{ borderTop: '1px solid #f1f5f9' }}>

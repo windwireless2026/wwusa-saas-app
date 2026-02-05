@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import type { User, Profile } from '@/types/global';
+import { getErrorMessage } from '@/lib/errors';
 import { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 export function useAuth() {
@@ -41,7 +42,7 @@ export function useAuth() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .single();
 
       if (error) throw error;
@@ -52,14 +53,14 @@ export function useAuth() {
         email: data.email,
         first_name: data.first_name,
         last_name: data.last_name,
-        role: data.role,
+        role: data.role_v2,
         avatar_url: data.avatar_url,
         job_title: data.job_title,
         created_at: data.created_at,
         updated_at: data.updated_at,
       });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

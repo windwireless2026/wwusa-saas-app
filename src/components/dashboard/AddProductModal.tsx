@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
+import { getErrorMessage } from '@/lib/errors';
 import { useTranslations } from 'next-intl';
 import { useUI } from '@/context/UIContext';
 
@@ -53,7 +54,7 @@ export default function AddProductModal({
     }
   }, [isOpen, product]);
 
-  const { alert, confirm } = useUI();
+  const { alert, confirm, toast } = useUI();
 
   const fetchInitialData = async () => {
     // Fetch Manufacturers
@@ -95,8 +96,8 @@ export default function AddProductModal({
       onSuccess();
       onClose();
       await alert('Sucesso', 'Modelo movido para a lixeira.', 'success');
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao excluir: ' + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error('Erro ao excluir: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -150,8 +151,8 @@ export default function AddProductModal({
         manufacturer: 'Apple',
         release_year: new Date().getFullYear(),
       });
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao salvar produto: ' + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error('Erro ao salvar produto: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }

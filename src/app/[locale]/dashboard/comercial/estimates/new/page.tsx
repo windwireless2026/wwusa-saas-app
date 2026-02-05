@@ -5,6 +5,7 @@ import { useSupabase } from '@/hooks/useSupabase';
 import { useRouter } from 'next/navigation';
 import { useUI } from '@/context/UIContext';
 import Link from 'next/link';
+import { getErrorMessage } from '@/lib/errors';
 
 type Agent = {
     id: string;
@@ -37,7 +38,7 @@ const GRADES = ['As-Is', 'LEILAO', 'A', 'A-', 'AB', 'B', 'C', 'RMA', 'Open Box',
 export default function NewEstimatePage() {
     const supabase = useSupabase();
     const router = useRouter();
-    const { alert } = useUI();
+    const { alert, toast } = useUI();
 
     const [allAgents, setAllAgents] = useState<Agent[]>([]);
     const [salespersons, setSalespersons] = useState<any[]>([]);
@@ -53,6 +54,8 @@ export default function NewEstimatePage() {
     const [selectedCustomer, setSelectedCustomer] = useState<Agent | null>(null);
     const [forwarderId, setForwarderId] = useState('');
     const [selectedForwarder, setSelectedForwarder] = useState<Agent | null>(null);
+    const [freteiroId, setFreteiroId] = useState('');
+    const [selectedFreteiro, setSelectedFreteiro] = useState<Agent | null>(null);
     const [deliveryType, setDeliveryType] = useState<'customer' | 'forwarder' | 'pickup' | 'custom'>('customer');
 
     // Bill To (Nome e Endereço que sai na NF)
@@ -165,6 +168,7 @@ export default function NewEstimatePage() {
     // Filtered lists for the dropdowns
     const customers = allAgents.filter(a => a.roles?.includes('cliente'));
     const forwarderList = allAgents.filter(a => a.roles?.includes('transportadora_cliente'));
+    const freteiroList = allAgents.filter(a => a.roles?.includes('freteiro'));
 
     // Fallback if no specific role is found (helps debugging if user forgot to check correct roles)
     const customerList = customers.length > 0 ? customers : allAgents;
@@ -212,14 +216,15 @@ export default function NewEstimatePage() {
             setShipToZip(selectedCustomer.address_zip || '');
             setShipToCountry(selectedCustomer.country || '');
             setShipToPhone(selectedCustomer.phone || '');
-        } else if (deliveryType === 'forwarder' && selectedForwarder) {
-            setShipToName(selectedForwarder.name);
-            setShipToAddress(selectedForwarder.address_line1 || '');
-            setShipToCity(selectedForwarder.address_city || '');
-            setShipToState(selectedForwarder.address_state || '');
-            setShipToZip(selectedForwarder.address_zip || '');
-            setShipToCountry(selectedForwarder.country || '');
-            setShipToPhone(selectedForwarder.phone || '');
+        } else if (deliveryType === 'forwarder' && (selectedFreteiro || selectedForwarder)) {
+            const shipSource = selectedFreteiro || selectedForwarder;
+            setShipToName(shipSource.name);
+            setShipToAddress(shipSource.address_line1 || '');
+            setShipToCity(shipSource.address_city || '');
+            setShipToState(shipSource.address_state || '');
+            setShipToZip(shipSource.address_zip || '');
+            setShipToCountry(shipSource.country || '');
+            setShipToPhone(shipSource.phone || '');
         } else if (deliveryType === 'pickup') {
             setShipToName(`PICKUP AT ${companyInfo?.trade_name || companyInfo?.legal_name || 'MIAMI OFFICE'}`);
             setShipToAddress(companyInfo?.address_line1 || '175 SW 7th St Ste 1602');
@@ -229,7 +234,7 @@ export default function NewEstimatePage() {
             setShipToCountry(companyInfo?.country || 'USA');
             setShipToPhone(companyInfo?.phone || '');
         }
-    }, [selectedCustomer, selectedForwarder, deliveryType, companyInfo]);
+    }, [selectedCustomer, selectedForwarder, selectedFreteiro, deliveryType, companyInfo]);
 
     const handleCustomerChange = (id: string) => {
         setCustomerId(id);
@@ -251,6 +256,8 @@ export default function NewEstimatePage() {
         if (type !== 'forwarder') {
             setForwarderId('');
             setSelectedForwarder(null);
+            setFreteiroId('');
+            setSelectedFreteiro(null);
         }
         if (type === 'custom') {
             setShipToName('');
@@ -356,7 +363,7 @@ export default function NewEstimatePage() {
             return;
         }
         if (deliveryType === 'forwarder' && !forwarderId) {
-            await alert('Erro', 'Selecione a transportadora', 'danger');
+            toast.error('Selecione a transportadora');
             return;
         }
         if (!shipToAddress || !shipToCity) {
@@ -364,7 +371,7 @@ export default function NewEstimatePage() {
             return;
         }
         if (items.length === 0) {
-            await alert('Erro', 'Adicione pelo menos um item', 'danger');
+            toast.error('Adicione pelo menos um item');
             return;
         }
 
@@ -379,6 +386,7 @@ export default function NewEstimatePage() {
                 .insert({
                     customer_id: customerId,
                     forwarder_id: forwarderId || null,
+                    freteiro_id: freteiroId || null,
                     estimate_date: estimateDate,
                     due_date: dueDate || null,
                     ship_date: shipDate || null,
@@ -444,8 +452,8 @@ export default function NewEstimatePage() {
             await alert('Sucesso', `Estimate #${estimate.estimate_number} criado com sucesso!`, 'success');
             router.push(`/pt/dashboard/comercial/estimates/${estimate.id}`);
 
-        } catch (error: any) {
-            await alert('Erro', error.message, 'danger');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -518,7 +526,7 @@ export default function NewEstimatePage() {
     );
 
     return (
-        <div style={{ padding: '0', minHeight: '100vh', maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ padding: '40px', minHeight: '100vh', maxWidth: '1400px', margin: '0 auto' }}>
             {/* Header */}
             <div style={{ marginBottom: '32px' }}>
                 <div style={{
@@ -558,7 +566,7 @@ export default function NewEstimatePage() {
                                 </h3>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
                                 <div>
                                     <label style={labelStyle}>👤 Cliente (Financeiro) *</label>
                                     <select
@@ -596,6 +604,27 @@ export default function NewEstimatePage() {
                                     </select>
                                 </div>
                             </div>
+                            {deliveryType === 'forwarder' && (
+                                <div style={{ marginBottom: '32px' }}>
+                                    <label style={{ ...labelStyle, color: '#0EA5E9' }}>🚛 Freteiro</label>
+                                    <select
+                                        value={freteiroId}
+                                        onChange={(e) => handleFreteiroChange(e.target.value)}
+                                        style={{
+                                            ...inputStyle,
+                                            height: '48px',
+                                            cursor: 'pointer',
+                                            borderColor: freteiroId ? '#0EA5E9' : '#e2e8f0',
+                                            borderWidth: freteiroId ? '2px' : '1px'
+                                        }}
+                                    >
+                                        <option value="">Selecione o freteiro (opcional)...</option>
+                                        {freteiroList.map(f => (
+                                            <option key={f.id} value={f.id}>{f.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
                             <label style={labelStyle}>📦 Modalidade de Entrega</label>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
@@ -734,7 +763,7 @@ export default function NewEstimatePage() {
                         {/* Summary Card */}
                         <div style={{
                             background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                            padding: '32px',
+                            padding: '40px',
                             borderRadius: '24px',
                             color: 'white',
                             boxShadow: '0 20px 40px rgba(15, 23, 42, 0.2)',
@@ -750,7 +779,7 @@ export default function NewEstimatePage() {
                                         📦 {items.reduce((sum, i) => sum + i.quantity, 0)} ITENS
                                     </span>
                                     <span style={{ padding: '6px 14px', background: payAtDestination ? '#0ea5e9' : '#7c3aed', borderRadius: '100px', fontSize: '11px', fontWeight: '900' }}>
-                                        {payAtDestination ? '🇵🇾 DESTINO' : '🇺🇸 ORIGEM'}
+                                        {payAtDestination ? '📦 DESTINO' : '🇺🇸 ORIGEM'}
                                     </span>
                                 </div>
                             </div>
@@ -827,7 +856,7 @@ export default function NewEstimatePage() {
                                             color: payAtDestination ? '#0369a1' : '#7c3aed'
                                         }}
                                     >
-                                        {payAtDestination ? '🇵🇾 PARAGUAI' : '🇺🇸 MIAMI'}
+                                        {payAtDestination ? '📦 PAGAMENTO NO DESTINO' : '🇺🇸 PAGAMENTO NA ORIGEM'}
                                     </button>
                                 </div>
                             </div>

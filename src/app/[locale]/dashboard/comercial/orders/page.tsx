@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function OrdersListPage() {
     const supabase = useSupabase();
@@ -41,13 +42,17 @@ export default function OrdersListPage() {
     const cardStyle = { background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #f1f5f9' };
 
     return (
-        <div style={{ padding: '32px', minHeight: '100vh', background: '#f8fafc' }}>
-            <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <div style={{ fontSize: '11px', fontWeight: '900', color: '#7c3aed', textTransform: 'uppercase', marginBottom: '8px' }}>COMERCIAL › PEDIDOS</div>
-                    <h1 style={{ fontSize: '32px', fontWeight: '950', color: '#0f172a', margin: 0 }}>🛒 Pedidos de Venda</h1>
-                </div>
-            </div>
+        <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+            <PageHeader
+                title="Pedidos de Venda"
+                description="Gestão de todos os pedidos confirmados"
+                icon="🛒"
+                breadcrumbs={[
+                    { label: 'COMERCIAL', href: '/dashboard/comercial', color: '#0891b2' },
+                    { label: 'PEDIDOS', color: '#0891b2' },
+                ]}
+                moduleColor="#0891b2"
+            />
 
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>Carregando pedidos...</div>

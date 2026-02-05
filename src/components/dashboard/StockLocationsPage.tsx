@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useUI } from '@/context/UIContext';
 import ColumnFilter from '@/components/ui/ColumnFilter';
+import PageHeader from '@/components/ui/PageHeader';
+import { getErrorMessage } from '@/lib/errors';
 
 interface StockLocation {
   id: string;
@@ -17,6 +19,11 @@ interface StockLocation {
   country: string | null;
   zip_code: string | null;
   created_at: string;
+  include_in_avg_cost: boolean;
+  include_in_inventory_valuation: boolean;
+  auto_create_estimate: boolean;
+  default_customer_id: string | null;
+  is_wind_stock: boolean;
 }
 
 export default function StockLocationsPage() {
@@ -37,8 +44,14 @@ export default function StockLocationsPage() {
     state: '',
     country: 'USA',
     zip_code: '',
+    include_in_avg_cost: true,
+    include_in_inventory_valuation: true,
+    auto_create_estimate: false,
+    default_customer_id: '',
+    is_wind_stock: false,
   });
-  const { alert, confirm } = useUI();
+  const [agents, setAgents] = useState<any[]>([]);
+  const { alert, confirm, toast } = useUI();
 
   // Filtros de coluna tipo Excel
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
@@ -47,7 +60,18 @@ export default function StockLocationsPage() {
 
   useEffect(() => {
     fetchLocations();
+    fetchAgents();
   }, [showDeleted]);
+
+  const fetchAgents = async () => {
+    const { data } = await supabase
+      .from('agents')
+      .select('id, name')
+      .contains('roles', ['cliente'])
+      .is('deleted_at', null)
+      .order('name');
+    if (data) setAgents(data);
+  };
 
   const fetchLocations = async () => {
     setLoading(true);
@@ -59,8 +83,13 @@ export default function StockLocationsPage() {
       query = query.is('deleted_at', null);
     }
 
-    const { data } = await query;
-    if (data) setLocations(data);
+    const { data, error } = await query;
+    if (error) {
+      console.error('StockLocationsPage fetch error:', error?.message || error?.code || error);
+      setLocations([]);
+    } else {
+      setLocations(data || []);
+    }
     setLoading(false);
   };
 
@@ -119,6 +148,11 @@ export default function StockLocationsPage() {
       state: '',
       country: 'USA',
       zip_code: '',
+      include_in_avg_cost: true,
+      include_in_inventory_valuation: true,
+      auto_create_estimate: false,
+      default_customer_id: '',
+      is_wind_stock: false,
     });
     setEditingLocation(null);
   };
@@ -135,6 +169,11 @@ export default function StockLocationsPage() {
         state: formData.state,
         country: formData.country,
         zip_code: formData.zip_code,
+        include_in_avg_cost: formData.include_in_avg_cost,
+        include_in_inventory_valuation: formData.include_in_inventory_valuation,
+        auto_create_estimate: formData.auto_create_estimate,
+        default_customer_id: formData.default_customer_id || null,
+        is_wind_stock: formData.is_wind_stock,
       };
 
       if (editingLocation) {
@@ -143,17 +182,17 @@ export default function StockLocationsPage() {
           .update(payload)
           .eq('id', editingLocation.id);
         if (error) throw error;
-        await alert('Sucesso', t('messages.successUpdate'), 'success');
+        toast.success(t('messages.successUpdate'));
       } else {
         const { error } = await supabase.from('stock_locations').insert([payload]);
         if (error) throw error;
-        await alert('Sucesso', t('messages.successAdd'), 'success');
+        toast.success(t('messages.successAdd'));
       }
       setIsAddModalOpen(false);
       resetForm();
       fetchLocations();
-    } catch (error: any) {
-      await alert('Erro', t('messages.errorSave') + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error(t('messages.errorSave') + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -169,6 +208,11 @@ export default function StockLocationsPage() {
       state: location.state || '',
       country: location.country || 'USA',
       zip_code: location.zip_code || '',
+      include_in_avg_cost: location.include_in_avg_cost ?? true,
+      include_in_inventory_valuation: location.include_in_inventory_valuation ?? true,
+      auto_create_estimate: location.auto_create_estimate ?? false,
+      default_customer_id: location.default_customer_id || '',
+      is_wind_stock: location.is_wind_stock || false,
     });
     setIsAddModalOpen(true);
   };
@@ -190,8 +234,9 @@ export default function StockLocationsPage() {
 
       if (error) throw error;
       await fetchLocations();
-    } catch (error: any) {
-      await alert('Erro', t('messages.errorDelete') + error.message, 'danger');
+      toast.success(t('messages.successDelete'));
+    } catch (error: unknown) {
+      toast.error(t('messages.errorDelete') + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -207,74 +252,64 @@ export default function StockLocationsPage() {
 
       if (error) throw error;
       await fetchLocations();
-      await alert('Sucesso', t('messages.successRestore'), 'success');
-    } catch (error: any) {
-      await alert('Erro', t('messages.errorRestore') + error.message, 'danger');
+      toast.success(t('messages.successRestore'));
+    } catch (error: unknown) {
+      toast.error(t('messages.errorRestore') + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: '0px', minHeight: '100vh', background: 'transparent' }}>
-      {/* Breadcrumb */}
-      <div style={{ marginBottom: '24px', fontSize: '14px', color: '#64748b' }}>
-        📋 <a href="/dashboard/registration" style={{ fontWeight: '600', color: '#3b82f6', textDecoration: 'none', cursor: 'pointer' }}>Cadastro</a> › Locais de Estoque
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <div>
-          <h1 style={{ fontSize: '36px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>
-            🏢 {t('title')}
-          </h1>
-          <p style={{ color: '#64748b', marginTop: '8px' }}>
-            {t('subtitle')}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => {
-              setShowDeleted(!showDeleted);
-            }}
-            style={{
-              background: showDeleted ? '#64748b' : 'white',
-              color: showDeleted ? 'white' : '#64748b',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '14px 24px',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            {showDeleted ? 'Ver Ativos' : 'Ver Lixeira'}
-          </button>
-
-          <button
-            onClick={() => {
-              resetForm();
-              setIsAddModalOpen(true);
-            }}
-            style={{
-              background: '#0EA5E9',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '14px 28px',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 8px 20px rgba(14, 165, 233, 0.3)',
-            }}
-          >
-            {t('newButton')}
-          </button>
-        </div>
-      </div>
+    <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+      <PageHeader
+        title="Locais de Estoque"
+        description="Armazéns e pontos de armazenamento"
+        icon="📍"
+        breadcrumbs={[
+          { label: 'OPERAÇÕES', href: '/operations', color: '#7c3aed' },
+          { label: 'LOCAIS DE ESTOQUE', color: '#7c3aed' },
+        ]}
+        moduleColor="#7c3aed"
+        actions={
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => setShowDeleted(!showDeleted)}
+              style={{
+                background: showDeleted ? '#64748b' : 'white',
+                color: showDeleted ? 'white' : '#64748b',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '14px 24px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+            >
+              {showDeleted ? '👀 Ver Ativos' : '🚫 Ver Inativos'}
+            </button>
+            <button
+              onClick={() => {
+                resetForm();
+                setIsAddModalOpen(true);
+              }}
+              style={{
+                background: '#7c3aed',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px 28px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 8px 20px rgba(124, 58, 237, 0.3)',
+              }}
+            >
+              {t('newButton')}
+            </button>
+          </div>
+        }
+      />
 
       {/* Search and Clear Filters */}
       <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -395,8 +430,9 @@ export default function StockLocationsPage() {
                           <button
                             onClick={() => handleDelete(loc.id, loc.name)}
                             style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#dc2626', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                            title="Inativar"
                           >
-                            🗑️
+                            🚫
                           </button>
                         </>
                       ) : (
@@ -542,6 +578,72 @@ export default function StockLocationsPage() {
                   placeholder={t('modal.descPlaceholder')}
                   style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '14px', height: '80px', resize: 'none' }}
                 />
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', display: 'grid', gap: '16px' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>
+                  ⚙️ Regras de Negócio
+                </h4>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#475569', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.include_in_avg_cost}
+                    onChange={e => setFormData({ ...formData, include_in_avg_cost: e.target.checked })}
+                  />
+                  Incluir no cálculo de Preço Médio
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#475569', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.include_in_inventory_valuation}
+                    onChange={e => setFormData({ ...formData, include_in_inventory_valuation: e.target.checked })}
+                  />
+                  Incluir no Valor Total do Dashboard
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#475569', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.is_wind_stock}
+                    onChange={e => setFormData({ ...formData, is_wind_stock: e.target.checked })}
+                  />
+                  <strong>Estoque WIND (Padrão para Filtros)</strong>
+                </label>
+
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '4px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#475569', cursor: 'pointer', marginBottom: '12px' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.auto_create_estimate}
+                      onChange={e => setFormData({ ...formData, auto_create_estimate: e.target.checked })}
+                    />
+                    <strong>Gerar Estimate Automático (Back-to-Back)</strong>
+                  </label>
+
+                  {formData.auto_create_estimate && (
+                    <div className="animate-in fade-in slide-in-from-top-2">
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
+                        Cliente para o Estimate
+                      </label>
+                      <select
+                        required={formData.auto_create_estimate}
+                        value={formData.default_customer_id}
+                        onChange={e => setFormData({ ...formData, default_customer_id: e.target.value })}
+                        style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '14px', background: 'white' }}
+                      >
+                        <option value="">Selecione o cliente...</option>
+                        {agents.map(a => (
+                          <option key={a.id} value={a.id}>{a.name}</option>
+                        ))}
+                      </select>
+                      <p style={{ fontSize: '11px', color: '#64748b', marginTop: '8px', lineHeight: '1.4' }}>
+                        Ao adicionar itens neste local, o sistema criará um Estimate em rascunho para este cliente automaticamente.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>

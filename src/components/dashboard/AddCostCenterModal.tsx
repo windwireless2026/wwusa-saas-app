@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useUI } from '@/context/UIContext';
+import { getErrorMessage } from '@/lib/errors';
 
 interface AddCostCenterModalProps {
     isOpen: boolean;
@@ -19,7 +20,7 @@ interface AddCostCenterModalProps {
 
 export default function AddCostCenterModal({ isOpen, onClose, onSuccess, costCenter }: AddCostCenterModalProps) {
     const supabase = useSupabase();
-    const { alert } = useUI();
+    const { alert, toast } = useUI();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
@@ -59,7 +60,7 @@ export default function AddCostCenterModal({ isOpen, onClose, onSuccess, costCen
                     .update(formData)
                     .eq('id', costCenter.id);
                 if (error) throw error;
-                await alert('Sucesso', 'Centro de Custo atualizado com sucesso!', 'success');
+                toast.success('Centro de Custo atualizado com sucesso!');
             } else {
                 const { error } = await supabase
                     .from('cost_centers')
@@ -69,8 +70,8 @@ export default function AddCostCenterModal({ isOpen, onClose, onSuccess, costCen
             }
             onSuccess();
             onClose();
-        } catch (error: any) {
-            alert('Erro', error.message, 'danger');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error));
         } finally {
             setLoading(false);
         }

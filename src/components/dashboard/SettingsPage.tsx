@@ -5,6 +5,8 @@ import { useSupabase } from '@/hooks/useSupabase';
 import { useUI } from '@/context/UIContext';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
+import PageHeader from '@/components/ui/PageHeader';
+import { getErrorMessage } from '@/lib/errors';
 
 interface CompanySettings {
   id: string;
@@ -42,7 +44,7 @@ interface CompanySettings {
 export default function SettingsPage() {
   const t = useTranslations('Dashboard.Settings');
   const supabase = useSupabase();
-  const { alert } = useUI();
+  const { alert, toast } = useUI();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
@@ -72,9 +74,9 @@ export default function SettingsPage() {
       if (data) {
         setSettings(data);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch settings:', error);
-      await alert('Erro', 'Erro ao carregar configurações: ' + error.message, 'danger');
+      toast.error('Erro ao carregar configurações: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -119,10 +121,10 @@ export default function SettingsPage() {
 
       if (error) throw error;
 
-      await alert('Sucesso', 'Configurações salvas com sucesso!', 'success');
+      toast.success('Configurações salvas com sucesso!');
       await fetchSettings();
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao salvar configurações: ' + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error('Erro ao salvar configurações: ' + getErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -157,28 +159,17 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ color: '#1e293b', minHeight: '100vh' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '40px' }}>
-        <div
-          style={{
-            fontSize: '11px',
-            fontWeight: '600',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            color: '#94a3b8',
-            marginBottom: '8px',
-          }}
-        >
-          <span>⚙️ Configurações</span>
-        </div>
-        <h1 style={{ fontSize: '36px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>
-          Dados da Empresa
-        </h1>
-        <p style={{ color: '#64748b', fontSize: '15px', marginTop: '8px' }}>
-          Configure as informações legais e comerciais para gerar invoices e contratos
-        </p>
-      </div>
+    <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+      <PageHeader
+        title="Configurações da Empresa"
+        description="Informações legais e comerciais para documentos"
+        icon="⚙️"
+        breadcrumbs={[
+          { label: 'CONFIGURAÇÕES', href: '/settings', color: '#64748b' },
+          { label: 'EMPRESA', color: '#64748b' },
+        ]}
+        moduleColor="#64748b"
+      />
 
       <form key={settings?.id || 'new'} onSubmit={handleSubmit}>
         <div style={{ display: 'grid', gap: '32px' }}>

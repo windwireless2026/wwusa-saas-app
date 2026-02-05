@@ -9,14 +9,18 @@ export interface User {
   email: string;
   first_name: string | null;
   last_name: string | null;
-  role: UserRole;
+  role: UserRoleV2;
   avatar_url: string | null;
   job_title: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type UserRole = 'admin' | 'manager' | 'operator' | 'viewer';
+// Roles unificadas (hierarquia: socio > operacional > cliente)
+export type UserRoleV2 = 'operacional' | 'cliente' | 'socio';
+
+// Alias para compatibilidade
+export type UserRole = UserRoleV2;
 
 export interface Profile {
   id: string;
@@ -24,7 +28,7 @@ export interface Profile {
   first_name: string | null;
   last_name: string | null;
   email: string;
-  role: UserRole;
+  role: UserRoleV2;
   avatar_url: string | null;
   job_title: string | null;
   created_at: string;

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useUI } from '@/context/UIContext';
 import { useAuditLog } from '@/hooks/useAuditLog';
+import { getErrorMessage } from '@/lib/errors';
 
 interface Bank {
     id: string;
@@ -27,7 +28,7 @@ interface PaymentModalProps {
 
 export default function PaymentModal({ isOpen, onClose, onSuccess, invoice }: PaymentModalProps) {
     const supabase = useSupabase();
-    const { alert: uiAlert } = useUI();
+    const { alert: uiAlert, toast } = useUI();
     const { logAction } = useAuditLog();
     const [loading, setLoading] = useState(false);
     const [banks, setBanks] = useState<Bank[]>([]);
@@ -70,7 +71,7 @@ export default function PaymentModal({ isOpen, onClose, onSuccess, invoice }: Pa
         e.preventDefault();
         if (!invoice) return;
         if (!formData.bank_id) {
-            uiAlert('Atenção', 'Selecione o banco de origem do recurso.', 'danger');
+            toast.warning('Selecione o banco de origem do recurso.');
             return;
         }
 
@@ -101,9 +102,9 @@ export default function PaymentModal({ isOpen, onClose, onSuccess, invoice }: Pa
             await uiAlert('Sucesso', `Pagamento da AP ${invoice.ap_number} registrado com sucesso!`, 'success');
             onSuccess();
             onClose();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error recording payment:', error);
-            uiAlert('Erro', 'Não foi possível registrar o pagamento: ' + error.message, 'danger');
+            toast.error('Não foi possível registrar o pagamento: ' + getErrorMessage(error));
         } finally {
             setLoading(false);
         }

@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { processInventoryFile } from '@/lib/inventoryImport';
 import ColumnFilter from '@/components/ui/ColumnFilter';
 import StockEntryWizard from '@/components/dashboard/StockEntryWizard';
+import PageHeader from '@/components/ui/PageHeader';
 
 type InventoryItem = {
   id: string;
@@ -28,6 +29,7 @@ type InventoryItem = {
     last_name: string | null;
     email: string;
   };
+  location?: { name: string | null; is_wind_stock?: boolean } | null;
 };
 
 export default function InventoryPage() {
@@ -56,6 +58,8 @@ export default function InventoryPage() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [allLocations, setAllLocations] = useState<string[]>([]);
 
   const resetFilters = () => {
     setSearch('');
@@ -65,6 +69,8 @@ export default function InventoryPage() {
     setSelectedColors(allColors);
     setSelectedGrades(allGrades);
     setSelectedStatuses(uniqueStatuses);
+    const windLocations = Array.from(new Set(items.filter((i: any) => i.location?.is_wind_stock).map((i: any) => i.location?.name || 'Sem Local')));
+    setSelectedLocations(windLocations.length > 0 ? windLocations : allLocations);
   };
 
   useEffect(() => {
@@ -77,7 +83,7 @@ export default function InventoryPage() {
     // Optimized query to join profiles correctly and handle naming
     const { data, error } = await supabase
       .from('inventory')
-      .select('*, profiles:created_by(full_name, first_name, last_name, email)')
+      .select('*, profiles:created_by(full_name, first_name, last_name, email), location:stock_locations(name, is_wind_stock)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -87,10 +93,11 @@ export default function InventoryPage() {
       console.error('Error fetching inventory:', error);
     } else {
       setItems(data || []);
-      setAllModels(Array.from(new Set((data || []).map((i: any) => i.model))).sort() as string[]);
-      setAllCapacities(Array.from(new Set((data || []).map((i: any) => i.capacity))).sort() as string[]);
-      setAllColors(Array.from(new Set((data || []).map((i: any) => i.color).filter(Boolean))).sort() as string[]);
-      setAllGrades(Array.from(new Set((data || []).map((i: any) => i.grade).filter(Boolean))).sort() as string[]);
+      setAllModels(Array.from(new Set((data || []).map((i: InventoryItem) => i.model))).sort() as string[]);
+      setAllCapacities(Array.from(new Set((data || []).map((i: InventoryItem) => i.capacity))).sort() as string[]);
+      setAllColors(Array.from(new Set((data || []).map((i: InventoryItem) => i.color).filter(Boolean))).sort() as string[]);
+      setAllGrades(Array.from(new Set((data || []).map((i: InventoryItem) => i.grade).filter(Boolean))).sort() as string[]);
+      setAllLocations(Array.from(new Set((data || []).map((i: InventoryItem) => i.location?.name || 'Sem Local'))).sort() as string[]);
     }
     setLoading(false);
   };
@@ -127,6 +134,14 @@ export default function InventoryPage() {
       setSelectedStatuses(prev => {
         if (prev.length === 0) return uniqueStatuses;
         return prev;
+      });
+      setSelectedLocations(prev => {
+        if (prev.length === 0 && allLocations.length > 0) {
+const windLocations = Array.from(new Set(items.filter((i: InventoryItem) => i.location?.is_wind_stock).map((i: InventoryItem) => i.location?.name || 'Sem Local')));
+        return windLocations.length > 0 ? windLocations : allLocations;
+        }
+        const newItems = allLocations.filter(l => !prev.includes(l));
+        return newItems.length > 0 ? [...prev, ...newItems] : prev;
       });
     }
   }, [allModels, allCapacities, allColors, allGrades, uniqueStatuses]);
@@ -169,6 +184,7 @@ export default function InventoryPage() {
     const matchesColumnColor = selectedColors.length === 0 || selectedColors.includes(item.color || '') || (!item.color && allColors.length === 0);
     const matchesColumnGrade = selectedGrades.length === 0 || selectedGrades.includes(item.grade || '') || (!item.grade && allGrades.length === 0);
     const matchesColumnStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
+    const matchesColumnLocation = selectedLocations.length === 0 || selectedLocations.includes(item.location?.name || 'Sem Local');
 
     return (
       matchesGlobal &&
@@ -177,6 +193,7 @@ export default function InventoryPage() {
       matchesColumnColor &&
       matchesColumnGrade &&
       matchesColumnStatus &&
+      matchesColumnLocation &&
       (filterStatus === '' || item.status === filterStatus)
     );
   });
@@ -207,34 +224,66 @@ export default function InventoryPage() {
         onSuccess={fetchInventory}
       />
 
-      <div style={{ marginBottom: '32px' }}>
-        <div
+      <PageHeader
+        title="Estoque"
+        description="Gerenciar itens do estoque"
+        icon="📦"
+        breadcrumbs={[
+          { label: 'OPERAÇÕES', href: '/dashboard/operations', color: '#7c3aed' },
+          { label: 'ESTOQUE', color: '#7c3aed' },
+        ]}
+        moduleColor="#7c3aed"
+      />
+
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '10px',
+          marginBottom: '24px',
+          padding: '4px'
+        }}
+      >
+        <button
+          onClick={() => setSelectedLocations(allLocations)}
           style={{
-            fontSize: '11px',
-            fontWeight: '800',
-            color: '#94a3b8',
-            textTransform: 'uppercase',
-            marginBottom: '8px',
-            letterSpacing: '0.05em',
-            display: 'flex',
-            gap: '8px',
-            alignItems: 'center'
+            padding: '10px 20px',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            background: selectedLocations.length === allLocations.length ? '#7c3aed' : '#fff',
+            color: selectedLocations.length === allLocations.length ? '#fff' : '#64748b',
+            fontSize: '13px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: selectedLocations.length === allLocations.length ? '0 4px 12px rgba(124, 58, 237, 0.2)' : 'none'
           }}
         >
-          <span style={{ cursor: 'pointer', opacity: 0.7 }}>OPERAÇÕES</span>
-          <span>›</span>
-          <span style={{ color: '#7c3aed' }}>ESTOQUE</span>
-        </div>
-        <h1
-          style={{
-            fontSize: '36px',
-            fontWeight: '900',
-            color: '#0f172a',
-            letterSpacing: '-0.03em',
-          }}
-        >
-          Estoque
-        </h1>
+          📍 Todos os Locais
+        </button>
+        {allLocations.filter(l => l !== 'Sem Local').map(loc => {
+          const isSelected = selectedLocations.length === 1 && selectedLocations[0] === loc;
+          return (
+            <button
+              key={loc}
+              onClick={() => setSelectedLocations([loc])}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                background: isSelected ? '#7c3aed' : '#fff',
+                color: isSelected ? '#fff' : '#475569',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: isSelected ? '0 4px 12px rgba(124, 58, 237, 0.15)' : 'none'
+              }}
+            >
+              🏢 {loc}
+            </button>
+          );
+        })}
       </div>
 
       <div
@@ -435,7 +484,14 @@ export default function InventoryPage() {
                 />
               </th>
               <th style={thStyle}>{t('table.price')}</th>
-              <th style={thStyle}>{t('table.responsible')}</th>
+              <th style={thStyle}>
+                <ColumnFilter
+                  label="Local"
+                  options={allLocations}
+                  selected={selectedLocations}
+                  onChange={setSelectedLocations}
+                />
+              </th>
               <th style={thStyle}>{t('table.date')}</th>
               <th style={{ ...thStyle, textAlign: 'right' }}>{t('table.actions')}</th>
             </tr>
@@ -534,6 +590,9 @@ export default function InventoryPage() {
                       (item.profiles?.first_name ? `${item.profiles.first_name} ${item.profiles.last_name || ''}`.trim() : null) ||
                       item.profiles?.email?.split('@')[0] ||
                       '---'}
+                  </td>
+                  <td style={{ padding: '16px 24px', color: '#475569', fontSize: '13px', fontWeight: '600' }}>
+                    {item.location?.name || '---'}
                   </td>
                   <td style={{ padding: '16px 24px', color: '#94a3b8', fontSize: '12px' }}>
                     {new Date(item.created_at).toLocaleDateString('pt-BR', {

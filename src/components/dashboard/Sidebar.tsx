@@ -13,11 +13,25 @@ interface SidebarProps {
   locale: string;
 }
 
+type SubMenuItem = {
+  href?: string;
+  icon: string;
+  label: string;
+  isCategory?: boolean;
+};
+
+type MenuItem = {
+  id?: string;
+  href?: string;
+  icon: string;
+  label: string;
+  subItems?: SubMenuItem[];
+};
+
 export default function Sidebar({ isCollapsed, setIsCollapsed, locale }: SidebarProps) {
   const t = useTranslations('Dashboard.Sidebar');
   const pathname = usePathname();
   const supabase = useSupabase(); // Hook com instância única global
-  const [expandedModules, setExpandedModules] = useState<string[]>(['registration', 'operations']);
   const [userData, setUserData] = useState({ full_name: '', email: '', initials: '' });
 
   useEffect(() => {
@@ -85,71 +99,63 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, locale }: Sidebar
     };
   }, []);
 
-  const menuItems = [
-    { href: '/dashboard', icon: '📊', label: t('overview'), id: 'overview' },
+  const menuItems: MenuItem[] = [
     {
-      id: 'registration',
-      label: t('registrationModule'),
-      icon: '📋',
-      href: '/dashboard/registration',
+      href: '/dashboard',
+      icon: '📊',
+      label: t('overview'),
+      id: 'overview'
     },
     {
       id: 'operations',
       label: t('operationsModule'),
       icon: '⚡',
-      subItems: [
-        { href: '/dashboard/operations', icon: '📊', label: t('operationsDashboard') },
-        { href: '/dashboard/inventory', icon: '🔢', label: t('stock') },
-      ],
+      href: '/operations',
     },
     {
       id: 'comercial',
       label: t('comercialModule'),
       icon: '💼',
-      subItems: [
-        { href: '/dashboard/comercial', icon: '📊', label: t('comercialDashboard') },
-        { href: '/dashboard/comercial/estimates', icon: '📋', label: t('estimates') },
-      ],
+      href: '/commercial',
     },
     {
       id: 'financial',
       label: t('financialModule'),
       icon: '💰',
-      subItems: [
-        { href: '/dashboard/financas', icon: '📊', label: t('financialDashboard') },
-        { href: '/dashboard/invoices', icon: '💰', label: t('invoices') },
-      ],
+      href: '/finance',
+    },
+    {
+      id: 'partners',
+      label: t('partnersModule'),
+      icon: '🤝',
+      href: '/partners',
     },
     {
       id: 'security',
       label: t('securityModule'),
       icon: '🛡️',
-      subItems: [
-        { href: '/dashboard/security/logs', icon: '📋', label: t('auditLogs') },
-        { href: '/dashboard/users', icon: '👤', label: t('users') },
-      ],
+      href: '/security',
     },
     {
       id: 'settings',
       label: t('settings'),
       icon: '⚙️',
-      subItems: [
-        { href: '/dashboard/settings', icon: '🏢', label: t('companyData') },
-      ],
+      href: '/settings',
+    },
+    {
+      id: 'system',
+      label: t('systemModule'),
+      icon: '🛠️',
+      href: '/system',
     },
   ];
-
-  const toggleModule = (moduleId: string) => {
-    setExpandedModules(prev =>
-      prev.includes(moduleId) ? prev.filter(id => id !== moduleId) : [...prev, moduleId]
-    );
-  };
 
   const isActive = (path: string) => pathname === `/${locale}${path}`;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = `/${locale}/auth/login`;
+    // replace() evita que "Voltar" no navegador traga o usuário de volta ao dashboard
+    window.location.replace(`/${locale}/auth/login`);
   };
 
   return (
@@ -234,92 +240,29 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, locale }: Sidebar
       {/* Navigation */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }} className="hide-scroll">
         {menuItems.map(item => {
-          const isModule = item.subItems && item.subItems.length > 0;
-          const isExpanded = expandedModules.includes(item.id || '');
-          const active = !isModule && item.href ? isActive(item.href) : false;
-
-          if (!isModule) {
-            return (
-              <Link
-                key={item.id}
-                href={`/${locale}${item.href}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: isCollapsed ? '12px' : '12px 24px',
-                  justifyContent: isCollapsed ? 'center' : 'flex-start',
-                  color: active ? '#7c3aed' : '#64748b',
-                  background: active ? '#f5f3ff' : 'transparent',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s',
-                  fontWeight: active ? '700' : '500',
-                  borderRight: active ? '3px solid #7c3aed' : 'none',
-                }}
-              >
-                <span style={{ fontSize: '18px' }}>{item.icon}</span>
-                {!isCollapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          }
+          const active = item.href ? isActive(item.href) : false;
 
           return (
-            <div key={item.id} style={{ marginBottom: '4px' }}>
-              <div
-                onClick={() => !isCollapsed && toggleModule(item.id || '')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: isCollapsed ? 'center' : 'space-between',
-                  padding: '12px 24px',
-                  color: '#94a3b8',
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  cursor: isCollapsed ? 'default' : 'pointer',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {!isCollapsed && <span>{item.label}</span>}
-                  {isCollapsed && <span style={{ fontSize: '16px' }}>{item.icon}</span>}
-                </div>
-                {!isCollapsed && (
-                  <span style={{ fontSize: '10px', opacity: 0.5 }}>{isExpanded ? '▼' : '▶'}</span>
-                )}
-              </div>
-
-              {(isExpanded || isCollapsed) &&
-                item.subItems?.map(sub => {
-                  const subActive = isActive(sub.href);
-                  return (
-                    <Link
-                      key={sub.href}
-                      href={`/${locale}${sub.href}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: isCollapsed ? '12px' : '10px 24px 10px 48px',
-                        justifyContent: isCollapsed ? 'center' : 'flex-start',
-                        color: subActive ? '#7c3aed' : '#475569',
-                        background: subActive ? '#f5f3ff' : 'transparent',
-                        textDecoration: 'none',
-                        fontSize: '14px',
-                        fontWeight: subActive ? '600' : '500',
-                        transition: 'all 0.1s',
-                      }}
-                    >
-                      <span
-                        style={{ fontSize: '16px', filter: subActive ? 'none' : 'grayscale(1)' }}
-                      >
-                        {sub.icon}
-                      </span>
-                      {!isCollapsed && <span>{sub.label}</span>}
-                    </Link>
-                  );
-                })}
-            </div>
+            <Link
+              key={item.id}
+              href={`/${locale}${item.href}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: isCollapsed ? '12px' : '12px 24px',
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                color: active ? '#7c3aed' : '#64748b',
+                background: active ? '#f5f3ff' : 'transparent',
+                textDecoration: 'none',
+                transition: 'all 0.2s',
+                fontWeight: active ? '700' : '500',
+                borderRight: active ? '3px solid #7c3aed' : 'none',
+              }}
+            >
+              <span style={{ fontSize: '18px' }}>{item.icon}</span>
+              {!isCollapsed && <span>{item.label}</span>}
+            </Link>
           );
         })}
       </nav>
@@ -374,9 +317,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, locale }: Sidebar
                 }}
               >
                 {userData.full_name}
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '500' }}>
-                {userData.email ? 'Ver Perfil' : 'Carregando...'}
               </div>
             </div>
           )}

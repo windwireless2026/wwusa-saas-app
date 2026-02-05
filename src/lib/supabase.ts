@@ -10,7 +10,7 @@ export const supabase = typeof window === 'undefined'
   : null as any; // No browser, retorna null para forçar uso do useSupabase()
 
 // Types for our user roles
-export type UserRole = 'super_admin' | 'stock_manager' | 'finance_manager' | 'client' | 'partner';
+export type UserRole = 'operacional' | 'cliente' | 'socio';
 
 export interface UserProfile {
   id: string;

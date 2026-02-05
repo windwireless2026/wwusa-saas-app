@@ -7,6 +7,8 @@ import { useUI } from '@/context/UIContext';
 import AddProductModal from './AddProductModal';
 import { useTranslations } from 'next-intl';
 import ColumnFilter from '@/components/ui/ColumnFilter';
+import PageHeader from '@/components/ui/PageHeader';
+import { getErrorMessage } from '@/lib/errors';
 
 interface ProductModel {
   id: string;
@@ -22,7 +24,7 @@ export default function CatalogPage() {
   const t = useTranslations('Dashboard.Catalog');
   const tTypes = useTranslations('Dashboard.ProductTypes');
   const tCommon = useTranslations('Dashboard.Common');
-  const { alert, confirm } = useUI();
+  const { alert, confirm, toast } = useUI();
   const [products, setProducts] = useState<ProductModel[]>([]);
   const [manufacturerLogos, setManufacturerLogos] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -60,9 +62,6 @@ export default function CatalogPage() {
 
   const fetchProducts = async () => {
     setLoading(true);
-    console.log('🔍 [CatalogPage] Iniciando fetchProducts...');
-    console.log('🔍 [CatalogPage] Supabase client:', supabase);
-
     let query = supabase.from('product_catalog').select('*');
 
     if (showDeleted) {
@@ -73,26 +72,24 @@ export default function CatalogPage() {
 
     const { data, error } = await query;
 
-    console.log('🔍 [CatalogPage] Query result - Data:', data);
-    console.log('🔍 [CatalogPage] Query result - Error:', error);
-    console.log('🔍 [CatalogPage] Data length:', data?.length);
-
-    if (data) {
-      const sorted = [...data].sort((a, b) => {
-        if (a.release_year !== b.release_year) {
-          return (b.release_year || 0) - (a.release_year || 0);
-        }
-        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-      });
-      setProducts(sorted);
-
-      // Extract unique years present in the products
-      const years = Array.from(
-        new Set(data.map((p: ProductModel) => p.release_year).filter((y: number | null) => y !== null))
-      ) as number[];
-
-      setAllYears(years.sort((a: number, b: number) => b - a));
+    if (error) {
+      console.error('CatalogPage fetch error:', error?.message || error?.code || error);
+      setProducts([]);
+      setLoading(false);
+      return;
     }
+    const list = data || [];
+    const sorted = [...list].sort((a: ProductModel, b: ProductModel) => {
+      if (a.release_year !== b.release_year) {
+        return (b.release_year || 0) - (a.release_year || 0);
+      }
+      return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+    });
+    setProducts(sorted);
+    const years = Array.from(
+      new Set(list.map((p: ProductModel) => p.release_year).filter((y: number | null) => y !== null))
+    ) as number[];
+    setAllYears(years.sort((a: number, b: number) => b - a));
     setLoading(false);
   };
 
@@ -113,9 +110,9 @@ export default function CatalogPage() {
 
       if (error) throw error;
       await fetchProducts();
-      await alert('Sucesso', 'Modelo restaurado com sucesso!', 'success');
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao restaurar: ' + error.message, 'danger');
+      toast.success('Modelo restaurado com sucesso!');
+    } catch (error: unknown) {
+      toast.error('Erro ao restaurar: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -211,9 +208,9 @@ export default function CatalogPage() {
 
       if (error) throw error;
       await fetchProducts();
-      await alert('Sucesso', 'Modelo deletado com sucesso!', 'success');
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao deletar: ' + error.message, 'danger');
+      toast.success('Modelo deletado com sucesso!');
+    } catch (error: unknown) {
+      toast.error('Erro ao deletar: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -251,65 +248,55 @@ export default function CatalogPage() {
   };
 
   return (
-    <div style={{ padding: '0px', minHeight: '100vh', background: 'transparent' }}>
-      {/* Breadcrumb */}
-      <div style={{ marginBottom: '24px', fontSize: '14px', color: '#64748b' }}>
-        📋 <a href="/dashboard/registration" style={{ fontWeight: '600', color: '#3b82f6', textDecoration: 'none', cursor: 'pointer' }}>{t('breadcrumb')}</a> › {t('title')}
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <div>
-          <h1 style={{ fontSize: '36px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>
-            🗂️ {t('title')}
-          </h1>
-          <p style={{ color: '#64748b', marginTop: '8px' }}>
-            {t('description')}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => {
-              setShowDeleted(!showDeleted);
-            }}
-            style={{
-              background: showDeleted ? '#64748b' : 'white',
-              color: showDeleted ? 'white' : '#64748b',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '14px 24px',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            {showDeleted ? t('viewActive') || 'Ver Ativos' : t('viewTrash') || 'Ver Lixeira'}
-          </button>
-
-          <button
-            onClick={() => {
-              setEditingProduct(null);
-              setIsAddModalOpen(true);
-            }}
-            style={{
-              background: '#3B82F6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '14px 28px',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)',
-            }}
-          >
-            {t('addNew')}
-          </button>
-        </div>
-      </div>
+    <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+      <PageHeader
+        title="Catálogo de Modelos"
+        description="Especificações e catálogo de produtos"
+        icon="📱"
+        breadcrumbs={[
+          { label: 'OPERAÇÕES', href: '/operations', color: '#7c3aed' },
+          { label: 'MODELOS', color: '#7c3aed' },
+        ]}
+        moduleColor="#7c3aed"
+        actions={
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => setShowDeleted(!showDeleted)}
+              style={{
+                background: showDeleted ? '#64748b' : 'white',
+                color: showDeleted ? 'white' : '#64748b',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '14px 24px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+            >
+              {showDeleted ? t('viewActive') || 'Ver Ativos' : t('viewTrash') || 'Ver Lixeira'}
+            </button>
+            <button
+              onClick={() => {
+                setEditingProduct(null);
+                setIsAddModalOpen(true);
+              }}
+              style={{
+                background: '#7c3aed',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px 28px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 8px 20px rgba(124, 58, 237, 0.3)',
+              }}
+            >
+              {t('addNew')}
+            </button>
+          </div>
+        }
+      />
 
       {/* Search and Clear Filters */}
       <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>

@@ -1,5 +1,7 @@
-// US Bank Routing Number Database
-// Comprehensive list of major US banks and common regional routing numbers
+// US Bank Routing Number Database (ABA)
+// Lista local de bancos principais e regionais. Para expandir:
+// - CSV Fed: https://github.com/streamlined/ach-routing-numbers (routing_numbers_06_2022.csv)
+// - API (ex.): API Ninjas Routing Number API (free tier ~28k routings)
 
 export interface BankInfo {
   name: string;
@@ -113,6 +115,14 @@ const US_BANKS: Record<string, string> = {
   '021300077': 'M&T Bank',
   '041000014': 'KeyBank',
   '052001633': 'Santander Bank',
+
+  // Coastal Community Bank (WA)
+  '125109019': 'Coastal Community Bank',
+
+  // Colunn NA Mercury 
+  '121145433': 'Colunn NA Mercury Bank',
+
+  
 };
 
 export function lookupBankByRouting(routing: string): string | null {

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUI } from '@/context/UIContext';
 import { useTranslations } from 'next-intl';
+import { getErrorMessage } from '@/lib/errors';
 
 interface AddProductTypeModalProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ export default function AddProductTypeModal({
 }: AddProductTypeModalProps) {
   const t = useTranslations('Dashboard.Common');
   const [loading, setLoading] = useState(false);
-  const { alert, confirm } = useUI();
+  const { alert, confirm, toast } = useUI();
   const [formData, setFormData] = useState({
     name: '',
     tracking_method: 'Serial Number',
@@ -63,9 +64,9 @@ export default function AddProductTypeModal({
       if (error) throw error;
       onSuccess();
       onClose();
-      await alert('Sucesso', 'Categoria movida para a lixeira.', 'success');
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao excluir: ' + error.message, 'danger');
+      toast.success('Categoria movida para a lixeira.');
+    } catch (error: unknown) {
+      await alert('Erro', 'Erro ao excluir: ' + getErrorMessage(error), 'danger');
     } finally {
       setLoading(false);
     }
@@ -93,8 +94,8 @@ export default function AddProductTypeModal({
         `Categoria ${productType ? 'atualizada' : 'cadastrada'} com sucesso!`,
         'success'
       );
-    } catch (error: any) {
-      await alert('Erro', 'Erro: ' + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error('Erro: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }

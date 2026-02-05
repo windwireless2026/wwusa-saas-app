@@ -118,7 +118,7 @@ export const processInventoryFile = async (
           }
 
           resolve({ success: itemsToInsert.length, errors });
-        } catch (error: any) {
+        } catch (error: unknown) {
           reject(error);
         }
       };
@@ -129,7 +129,7 @@ export const processInventoryFile = async (
 
       reader.readAsArrayBuffer(file);
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     throw error;
   }
 };

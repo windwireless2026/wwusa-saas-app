@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useTranslations } from 'next-intl';
 import { useUI } from '@/context/UIContext';
@@ -8,6 +8,9 @@ import { useRouter } from 'next/navigation';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import Link from 'next/link';
 import PaymentModal from './PaymentModal';
+import PageHeader from '@/components/ui/PageHeader';
+import { getFiscalWeeksForMonth, FiscalWeek } from '@/lib/fiscalWeek';
+import { getErrorMessage } from '@/lib/errors';
 
 interface Invoice {
     id: string;
@@ -36,13 +39,34 @@ export default function InvoicesPage() {
     const supabase = useSupabase();
     const t = useTranslations('Dashboard.Invoices');
     const tCommon = useTranslations('Dashboard.Common');
-    const { alert: uiAlert, confirm: uiConfirm } = useUI();
+    const { alert: uiAlert, confirm: uiConfirm, toast } = useUI();
     const router = useRouter();
     const { logAction } = useAuditLog();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'overdue'>('all');
     const [showDeleted, setShowDeleted] = useState(false);
+
+    // Filter states
+    const [filterAP, setFilterAP] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
+    const [filterCostCenter, setFilterCostCenter] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
+    const [filterWeek, setFilterWeek] = useState<string>('');
+    const [filterWeekType, setFilterWeekType] = useState<'due' | 'payment'>('due'); // 'due' = vencimento, 'payment' = pagamento
+    const [filterMonthType, setFilterMonthType] = useState<'due' | 'payment'>('due'); // qual mês filtrar
+    const [filterMonth, setFilterMonth] = useState<string>(''); // YYYY-MM
+    const [filterMinValue, setFilterMinValue] = useState<string>('');
+    const [filterMaxValue, setFilterMaxValue] = useState<string>('');
+    const [filterMinDueDate, setFilterMinDueDate] = useState<string>('');
+    const [filterMaxDueDate, setFilterMaxDueDate] = useState<string>('');
+    const [fiscalWeeks, setFiscalWeeks] = useState<FiscalWeek[]>([]);
+    const [valuePreset, setValuePreset] = useState<string>('');
+
+    // Option lists for quick selection + typing
+    const apOptions = useMemo(() => Array.from(new Set(invoices.map(i => i.ap_number).filter(Boolean))), [invoices]);
+    const vendorOptions = useMemo(() => Array.from(new Set(invoices.map(i => i.agents?.name).filter(Boolean))), [invoices]);
+    const costCenterOptions = useMemo(() => Array.from(new Set(invoices.map(i => i.cost_centers?.code).filter(Boolean))), [invoices]);
 
     // Payment Modal State
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -51,6 +75,15 @@ export default function InvoicesPage() {
     useEffect(() => {
         fetchInvoices();
     }, [filter, showDeleted]);
+
+    // Load fiscal weeks for current month
+    useEffect(() => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        const weeks = getFiscalWeeksForMonth(year, month);
+        setFiscalWeeks(weeks);
+    }, []);
 
     const fetchInvoices = async () => {
         setLoading(true);
@@ -109,12 +142,12 @@ export default function InvoicesPage() {
                 details: `Excluiu a AP ${apNumber}`
             });
 
-            await uiAlert(tCommon('success'), t('deleteSuccess') || 'AP enviada para a lixeira.', 'success');
+            toast.success(t('deleteSuccess') || 'AP enviada para a lixeira.');
 
             fetchInvoices();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error deleting invoice:', error);
-            await uiAlert(tCommon('error'), 'Erro ao excluir AP: ' + error.message, 'danger');
+            toast.error('Erro ao excluir AP: ' + getErrorMessage(error));
         }
     };
 
@@ -137,9 +170,9 @@ export default function InvoicesPage() {
 
             await uiAlert(tCommon('success'), t('restoreSuccess') || 'AP restaurada com sucesso!', 'success');
             fetchInvoices();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error restoring invoice:', error);
-            await uiAlert(tCommon('error'), 'Erro ao restaurar AP: ' + error.message, 'danger');
+            toast.error('Erro ao restaurar AP: ' + getErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -175,67 +208,54 @@ export default function InvoicesPage() {
     };
 
     return (
-        <div style={{ padding: '32px', background: '#f8fafc', minHeight: '100vh' }}>
-            {/* Header */}
-            <div
-                style={{
-                    marginBottom: '32px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                }}
-            >
-                <div>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginBottom: '8px' }}>
-                        💰 Finanças › {t('breadcrumb')}
+        <div style={{ padding: '40px', background: '#f8fafc', minHeight: '100vh' }}>
+            <PageHeader
+                title="Contas a Pagar (AP)"
+                description="Gerenciar faturas e autorizações de pagamento"
+                icon="💰"
+                breadcrumbs={[
+                    { label: 'FINANCEIRO', href: '/finance', color: '#059669' },
+                    { label: 'CONTAS A PAGAR', color: '#059669' },
+                ]}
+                moduleColor="#059669"
+                actions={
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <button
+                            onClick={() => setShowDeleted(!showDeleted)}
+                            style={{
+                                padding: '12px 20px',
+                                background: showDeleted ? '#64748b' : '#fff',
+                                color: showDeleted ? '#fff' : '#64748b',
+                                borderRadius: '10px',
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                border: '1px solid #e2e8f0',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            {showDeleted ? '📄 Ver Ativos' : '🗑️ Ver Lixeira'}
+                        </button>
+                        <Link
+                            href="/finance/accounts-payable/new"
+                            style={{
+                                padding: '12px 24px',
+                                background: '#059669',
+                                color: 'white',
+                                borderRadius: '10px',
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                boxShadow: '0 8px 20px rgba(5, 150, 105, 0.3)',
+                            }}
+                        >
+                            ➕ {t('addNew')}
+                        </Link>
                     </div>
-                    <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                        💰 {t('title')}
-                    </h1>
-                    <p style={{ color: '#64748b', marginTop: '8px', fontSize: '14px' }}>
-                        {t('subtitle')}
-                    </p>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <button
-                        onClick={() => setShowDeleted(!showDeleted)}
-                        style={{
-                            padding: '12px 20px',
-                            background: showDeleted ? '#64748b' : '#fff',
-                            color: showDeleted ? '#fff' : '#64748b',
-                            borderRadius: '10px',
-                            fontWeight: '600',
-                            fontSize: '14px',
-                            border: '1px solid #e2e8f0',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'all 0.2s',
-                        }}
-                    >
-                        {showDeleted ? '📄 Ver Ativos' : '🗑️ Ver Lixeira'}
-                    </button>
-                    <Link
-                        href="/dashboard/invoices/new"
-                        style={{
-                            padding: '12px 24px',
-                            background: 'linear-gradient(135deg, #3B82F6 0%, #1e40af 100%)',
-                            color: 'white',
-                            borderRadius: '10px',
-                            fontWeight: '600',
-                            fontSize: '14px',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-                        }}
-                    >
-                        ➕ {t('addNew')}
-                    </Link>
-                </div>
-            </div>
+                }
+            />
 
             {/* Filters */}
             <div style={{ marginBottom: '24px', display: 'flex', gap: '12px' }}>
@@ -267,6 +287,24 @@ export default function InvoicesPage() {
                 ))}
             </div>
 
+            {/* Vencimento range in header */}
+            <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase' }}>Vencimento</div>
+                <input
+                    type="date"
+                    value={filterMinDueDate}
+                    onChange={(e) => setFilterMinDueDate(e.target.value)}
+                    style={{ padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', minWidth: '160px' }}
+                />
+                <span style={{ color: '#94a3b8', fontSize: '12px' }}>até</span>
+                <input
+                    type="date"
+                    value={filterMaxDueDate}
+                    onChange={(e) => setFilterMaxDueDate(e.target.value)}
+                    style={{ padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', minWidth: '160px' }}
+                />
+            </div>
+
             {/* Table */}
             <div
                 style={{
@@ -280,22 +318,187 @@ export default function InvoicesPage() {
                     <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                             <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
-                                {t('table.apNumber')}
+                                <div style={{ marginBottom: '8px' }}>{t('table.apNumber')}</div>
+                                <input
+                                    type="text"
+                                    placeholder="Selecionar ou digitar..."
+                                    value={filterAP}
+                                    onChange={(e) => setFilterAP(e.target.value)}
+                                    list="ap-options"
+                                    style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px' }}
+                                />
                             </th>
                             <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '25%' }}>
-                                {t('table.vendor')}
+                                <div style={{ marginBottom: '8px' }}>{t('table.vendor')}</div>
+                                <input
+                                    type="text"
+                                    placeholder="Selecionar ou digitar..."
+                                    value={filterVendor}
+                                    onChange={(e) => setFilterVendor(e.target.value)}
+                                    list="vendor-options"
+                                    style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px' }}
+                                />
                             </th>
                             <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '15%' }}>
-                                {t('table.costCenter')}
+                                <div style={{ marginBottom: '8px' }}>{t('table.costCenter')}</div>
+                                <input
+                                    type="text"
+                                    placeholder="Selecionar ou digitar..."
+                                    value={filterCostCenter}
+                                    onChange={(e) => setFilterCostCenter(e.target.value)}
+                                    list="cost-center-options"
+                                    style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px' }}
+                                />
+                            </th>
+                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '11%' }}>
+                                <div style={{ marginBottom: '8px' }}>VALOR</div>
+                                <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                                    <select
+                                        value={valuePreset}
+                                        onChange={(e) => {
+                                            const preset = e.target.value;
+                                            setValuePreset(preset);
+                                            if (!preset) {
+                                                setFilterMinValue('');
+                                                setFilterMaxValue('');
+                                                return;
+                                            }
+                                            const [min, max] = preset.split('-');
+                                            setFilterMinValue(min || '');
+                                            setFilterMaxValue(max || '');
+                                        }}
+                                        style={{ flex: 1, padding: '6px 6px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px' }}
+                                    >
+                                        <option value="">Selecionar faixa</option>
+                                        <option value="0-1000">0 a 1.000</option>
+                                        <option value="1000-5000">1.000 a 5.000</option>
+                                        <option value="5000-10000">5.000 a 10.000</option>
+                                        <option value="10000-50000">10.000 a 50.000</option>
+                                        <option value="50000-">50.000+</option>
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        value={filterMinValue}
+                                        onChange={(e) => {
+                                            setValuePreset('');
+                                            setFilterMinValue(e.target.value);
+                                        }}
+                                        style={{ flex: 1, padding: '6px 6px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px' }}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        value={filterMaxValue}
+                                        onChange={(e) => {
+                                            setValuePreset('');
+                                            setFilterMaxValue(e.target.value);
+                                        }}
+                                        style={{ flex: 1, padding: '6px 6px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px' }}
+                                    />
+                                </div>
                             </th>
                             <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '12%' }}>
-                                {t('table.amount')}
+                                <div style={{ marginBottom: '8px' }}>VENCIMENTO</div>
+                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>Range no cabeçalho</div>
                             </th>
-                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '12%' }}>
-                                {t('table.dueDate')}
+                            <th style={{ padding: '16px 24px', textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '13%' }}>
+                                <div style={{ marginBottom: '8px' }}>Semana Fiscal</div>
+                                <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                                    <button
+                                        onClick={() => setFilterWeekType('due')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '4px 6px',
+                                            fontSize: '10px',
+                                            fontWeight: '600',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            background: filterWeekType === 'due' ? '#059669' : '#e2e8f0',
+                                            color: filterWeekType === 'due' ? 'white' : '#64748b',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        Vencimento
+                                    </button>
+                                    <button
+                                        onClick={() => setFilterWeekType('payment')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '4px 6px',
+                                            fontSize: '10px',
+                                            fontWeight: '600',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            background: filterWeekType === 'payment' ? '#059669' : '#e2e8f0',
+                                            color: filterWeekType === 'payment' ? 'white' : '#64748b',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        Pagamento
+                                    </button>
+                                </div>
+                                <select
+                                    value={filterWeek}
+                                    onChange={(e) => setFilterWeek(e.target.value)}
+                                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px' }}
+                                >
+                                    <option value="">Todas</option>
+                                    {fiscalWeeks.map((week) => (
+                                        <option key={`${week.month}-${week.week}`} value={`${week.month}-${week.week}`}>
+                                            Semana {week.week}
+                                        </option>
+                                    ))}
+                                </select>
                             </th>
-                            <th style={{ padding: '16px 24px', textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '10%' }}>
-                                {t('table.status')}
+                            <th style={{ padding: '16px 24px', textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '11%' }}>
+                                <div style={{ marginBottom: '8px' }}>MÊS</div>
+                                <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                                    <button
+                                        onClick={() => setFilterMonthType('due')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '4px 6px',
+                                            fontSize: '10px',
+                                            fontWeight: '600',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            background: filterMonthType === 'due' ? '#059669' : '#e2e8f0',
+                                            color: filterMonthType === 'due' ? 'white' : '#64748b',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        Venc.
+                                    </button>
+                                    <button
+                                        onClick={() => setFilterMonthType('payment')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '4px 6px',
+                                            fontSize: '10px',
+                                            fontWeight: '600',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            background: filterMonthType === 'payment' ? '#059669' : '#e2e8f0',
+                                            color: filterMonthType === 'payment' ? 'white' : '#64748b',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        Pag.
+                                    </button>
+                                </div>
+                                <input
+                                    type="month"
+                                    value={filterMonth}
+                                    onChange={(e) => setFilterMonth(e.target.value)}
+                                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px' }}
+                                />
                             </th>
                             <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '13%' }}>
                                 {t('table.actions')}
@@ -316,8 +519,71 @@ export default function InvoicesPage() {
                                 </td>
                             </tr>
                         ) : (
-                            invoices.map((invoice) => {
-                                const statusColor = getStatusColor(invoice.status);
+                            invoices
+                                .filter(invoice => {
+                                    // Apply client-side filters
+                                    if (filterAP && !(invoice.ap_number || '').toLowerCase().includes(filterAP.toLowerCase())) return false;
+                                    if (filterVendor && !(invoice.agents?.name || '').toLowerCase().includes(filterVendor.toLowerCase())) return false;
+                                    if (filterCostCenter && !(invoice.cost_centers?.code || '').toLowerCase().includes(filterCostCenter.toLowerCase())) return false;
+                                    if (filterStatus && invoice.status !== filterStatus) return false;
+                                    
+                                    // Filter by value range
+                                    if (filterMinValue && invoice.amount < parseFloat(filterMinValue)) return false;
+                                    if (filterMaxValue && invoice.amount > parseFloat(filterMaxValue)) return false;
+                                    
+                                    // Filter by due date range
+                                    if (filterMinDueDate && invoice.due_date < filterMinDueDate) return false;
+                                    if (filterMaxDueDate && invoice.due_date > filterMaxDueDate) return false;
+                                    
+                                    // Filter by month
+                                    if (filterMonth) {
+                                        const dateToCheck = filterMonthType === 'payment' ? invoice.payment_date : invoice.due_date;
+                                        if (!dateToCheck) return false;
+                                        const invoiceMonth = dateToCheck.substring(0, 7); // YYYY-MM
+                                        if (invoiceMonth !== filterMonth) return false;
+                                    }
+                                    
+                                    // Filter by fiscal week
+                                    if (filterWeek) {
+                                        const dateToCheck = filterWeekType === 'payment' ? invoice.payment_date : invoice.due_date;
+                                        if (!dateToCheck) return false;
+                                        
+                                        const [monthStr, weekStr] = filterWeek.split('-');
+                                        const targetWeek = parseInt(weekStr);
+                                        
+                                        // Get the week for this invoice's date
+                                        const [invoiceYear, invoiceMonth] = dateToCheck.split('-').map(Number);
+                                        const invoiceWeeks = getFiscalWeeksForMonth(invoiceYear, invoiceMonth);
+                                        const invoiceWeekObj = invoiceWeeks.find(w => {
+                                            const startDate = new Date(`${w.startDate}T00:00:00`);
+                                            const endDate = new Date(`${w.endDate}T00:00:00`);
+                                            const checkDate = new Date(`${dateToCheck}T00:00:00`);
+                                            return checkDate >= startDate && checkDate <= endDate;
+                                        });
+                                        
+                                        if (!invoiceWeekObj || invoiceWeekObj.week !== targetWeek) return false;
+                                    }
+                                    
+                                    return true;
+                                })
+                                .map((invoice) => {
+                                    // Get fiscal week for this invoice based on filter type
+                                    const dateToUse = filterWeekType === 'payment' ? invoice.payment_date : invoice.due_date;
+                                    let weekLabel = '-';
+                                    
+                                    if (dateToUse) {
+                                        const [invoiceYear, invoiceMonth] = dateToUse.split('-').map(Number);
+                                        const invoiceWeeks = getFiscalWeeksForMonth(invoiceYear, invoiceMonth);
+                                        const invoiceWeekObj = invoiceWeeks.find(w => {
+                                            const startDate = new Date(`${w.startDate}T00:00:00`);
+                                            const endDate = new Date(`${w.endDate}T00:00:00`);
+                                            const checkDate = new Date(`${dateToUse}T00:00:00`);
+                                            return checkDate >= startDate && checkDate <= endDate;
+                                        });
+                                        weekLabel = invoiceWeekObj?.label || '-';
+                                    }
+                                    
+                                    const statusColor = getStatusColor(invoice.status);
                                 return (
                                     <tr key={invoice.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                         <td style={{ padding: '16px 24px' }}>
@@ -357,11 +623,14 @@ export default function InvoicesPage() {
                                                 '-'
                                             )}
                                         </td>
-                                        <td style={{ padding: '16px 24px', fontWeight: '600', color: '#0f172a' }}>
+                                        <td style={{ padding: '16px 24px', fontWeight: '600', color: '#0f172a', textAlign: 'right' }}>
                                             {formatCurrency(invoice.amount, invoice.currency)}
                                         </td>
-                                        <td style={{ padding: '16px 24px', color: '#475569', fontSize: '14px' }}>
+                                        <td style={{ padding: '16px 24px', color: '#475569', fontSize: '14px', textAlign: 'right' }}>
                                             {formatDate(invoice.due_date)}
+                                        </td>
+                                        <td style={{ padding: '16px 24px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#059669' }}>
+                                            {weekLabel}
                                         </td>
                                         <td style={{ padding: '16px 24px' }}>
                                             <span
@@ -430,7 +699,7 @@ export default function InvoicesPage() {
                                                             </button>
                                                         )}
                                                         <Link
-                                                            href={`/dashboard/invoices/${invoice.id}/edit`}
+                                                            href={`/finance/accounts-payable/${invoice.id}/edit`}
                                                             style={{
                                                                 padding: '6px 12px',
                                                                 borderRadius: '6px',
@@ -473,6 +742,23 @@ export default function InvoicesPage() {
                     </tbody>
                 </table>
             </div>
+
+            {/* Datalists for selection + typing */}
+            <datalist id="ap-options">
+                {apOptions.map((ap) => (
+                    <option key={ap} value={ap} />
+                ))}
+            </datalist>
+            <datalist id="vendor-options">
+                {vendorOptions.map((vendor) => (
+                    <option key={vendor} value={vendor} />
+                ))}
+            </datalist>
+            <datalist id="cost-center-options">
+                {costCenterOptions.map((cc) => (
+                    <option key={cc} value={cc} />
+                ))}
+            </datalist>
 
             <PaymentModal
                 isOpen={isPaymentModalOpen}

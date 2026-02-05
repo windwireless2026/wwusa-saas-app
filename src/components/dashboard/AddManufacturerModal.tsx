@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUI } from '@/context/UIContext';
+import { getErrorMessage } from '@/lib/errors';
 
 interface AddManufacturerModalProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ export default function AddManufacturerModal({
   manufacturer,
 }: AddManufacturerModalProps) {
   const [loading, setLoading] = useState(false);
-  const { alert, confirm } = useUI();
+  const { alert, confirm, toast } = useUI();
   const [productTypes, setProductTypes] = useState<any[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [formData, setFormData] = useState({
@@ -129,8 +130,8 @@ export default function AddManufacturerModal({
       onSuccess();
       onClose();
       await alert('Sucesso', 'Fabricante movido para a lixeira.', 'success');
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao excluir: ' + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error('Erro ao excluir: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -189,8 +190,8 @@ export default function AddManufacturerModal({
         `Fabricante ${manufacturer ? 'atualizado' : 'cadastrado'} com sucesso!`,
         'success'
       );
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao salvar: ' + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error('Erro ao salvar: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }

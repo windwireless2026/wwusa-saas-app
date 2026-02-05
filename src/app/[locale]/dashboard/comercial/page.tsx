@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
 
 type EstimateStats = {
     total: number;
@@ -31,7 +32,16 @@ export default function ComercialDashboard() {
         prospectingValue: 0,
         closedValue: 0
     });
-    const [recentEstimates, setRecentEstimates] = useState<any[]>([]);
+    type EstimateRow = {
+        id: string;
+        status: string;
+        total?: number;
+        created_at: string;
+        estimate_number: number;
+        estimate_date: string;
+        customer?: { name?: string } | null;
+    };
+    const [recentEstimates, setRecentEstimates] = useState<EstimateRow[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -52,23 +62,21 @@ export default function ComercialDashboard() {
             const now = new Date();
             const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+            const list = estimates as EstimateRow[];
             setStats({
-                total: estimates.length,
-                draft: estimates.filter((e: any) => e.status === 'draft').length,
-                sent: estimates.filter((e: any) => e.status === 'sent').length,
-                approved: estimates.filter((e: any) => e.status === 'approved').length,
-                converted: estimates.filter((e: any) => e.status === 'converted').length,
-                totalValue: estimates.reduce((sum: number, e: any) => sum + (e.total || 0), 0),
-                thisMonth: estimates.filter((e: any) => new Date(e.created_at) >= thisMonthStart).length,
-                thisMonthValue: estimates.filter((e: any) => new Date(e.created_at) >= thisMonthStart)
-                    .reduce((sum: number, e: any) => sum + (e.total || 0), 0),
-                prospectingValue: estimates.filter((e: any) => ['draft', 'sent'].includes(e.status))
-                    .reduce((sum: number, e: any) => sum + (e.total || 0), 0),
-                closedValue: estimates.filter((e: any) => ['approved', 'converted'].includes(e.status))
-                    .reduce((sum: number, e: any) => sum + (e.total || 0), 0)
+                total: list.length,
+                draft: list.filter((e) => e.status === 'draft').length,
+                sent: list.filter((e) => e.status === 'sent').length,
+                approved: list.filter((e) => e.status === 'approved').length,
+                converted: list.filter((e) => e.status === 'converted').length,
+                totalValue: list.reduce((sum, e) => sum + (e.total || 0), 0),
+                thisMonth: list.filter((e) => new Date(e.created_at) >= thisMonthStart).length,
+                thisMonthValue: list.filter((e) => new Date(e.created_at) >= thisMonthStart).reduce((sum, e) => sum + (e.total || 0), 0),
+                prospectingValue: list.filter((e) => ['draft', 'sent'].includes(e.status)).reduce((sum, e) => sum + (e.total || 0), 0),
+                closedValue: list.filter((e) => ['approved', 'converted'].includes(e.status)).reduce((sum, e) => sum + (e.total || 0), 0)
             });
 
-            setRecentEstimates(estimates.slice(0, 5));
+            setRecentEstimates(list.slice(0, 5));
         }
 
         setLoading(false);
@@ -92,32 +100,21 @@ export default function ComercialDashboard() {
     };
 
     return (
-        <div style={{ padding: '0', minHeight: '100vh' }}>
-            {/* Header */}
-            <div style={{ marginBottom: '40px' }}>
-                <div style={{
-                    fontSize: '11px',
-                    fontWeight: '900',
-                    color: '#7c3aed',
-                    textTransform: 'uppercase',
-                    marginBottom: '12px',
-                    letterSpacing: '0.1em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                }}>
-                    <span style={{ padding: '4px 10px', background: '#f5f3ff', borderRadius: '6px' }}>COMERCIAL</span>
-                    <span style={{ opacity: 0.3 }}>›</span>
-                    <span>PAINEL</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h1 style={{ fontSize: '42px', fontWeight: '950', color: '#0f172a', letterSpacing: '-0.04em', margin: 0 }}>
-                        💼 Comercial
-                    </h1>
+        <div style={{ padding: '40px', minHeight: '100vh' }}>
+            <PageHeader
+                title="Comercial"
+                description="Gestão de cotações, clientes e vendas"
+                icon="💼"
+                breadcrumbs={[
+                    { label: 'COMERCIAL', href: '/dashboard/comercial', color: '#0891b2' },
+                    { label: 'GESTÃO DE VENDAS', color: '#0891b2' },
+                ]}
+                moduleColor="#0891b2"
+                actions={
                     <Link
                         href="/dashboard/comercial/estimates/new"
                         style={{
-                            background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                            background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
                             color: 'white',
                             border: 'none',
                             borderRadius: '14px',
@@ -125,7 +122,7 @@ export default function ComercialDashboard() {
                             fontSize: '14px',
                             fontWeight: '800',
                             cursor: 'pointer',
-                            boxShadow: '0 8px 24px rgba(124, 58, 237, 0.35)',
+                            boxShadow: '0 8px 24px rgba(8, 145, 178, 0.35)',
                             textDecoration: 'none',
                             display: 'flex',
                             alignItems: 'center',
@@ -134,8 +131,8 @@ export default function ComercialDashboard() {
                     >
                         📋 Novo Estimate
                     </Link>
-                </div>
-            </div>
+                }
+            />
 
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '100px', color: '#94a3b8', fontWeight: '600' }}>

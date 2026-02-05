@@ -116,7 +116,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       <section style={{ padding: '80px 0', background: '#0f172a', color: 'white' }}>
         <div className="container" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '40px', textAlign: 'center' }}>
           <div>
-            <h3 style={{ fontSize: '48px', fontWeight: '900', marginBottom: '8px', color: '#60a5fa' }}>15k+</h3>
+            <h3 style={{ fontSize: '48px', fontWeight: '900', marginBottom: '8px', color: '#60a5fa' }}>500k+</h3>
             <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '600', textTransform: 'uppercase' }}>{tStats('sold')}</p>
           </div>
           <div>

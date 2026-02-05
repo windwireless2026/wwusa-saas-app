@@ -7,10 +7,14 @@ import Link from 'next/link';
 import { useUI } from '@/context/UIContext';
 import { lookupBankByRouting } from '@/lib/bankLookup';
 import { useTranslations } from 'next-intl';
+import PageHeader from '@/components/ui/PageHeader';
+import { getErrorMessage } from '@/lib/errors';
 
 interface AgentFormProps {
   onSuccess?: () => void;
   initialData?: any;
+  /** Base path for list/new/edit (e.g. /finance/agents). Default: /finance/agents */
+  agentsBasePath?: string;
 }
 
 // All agent types
@@ -21,6 +25,7 @@ const AGENT_TYPES = [
   { id: 'fornecedor_estoque', label: 'Fornecedor (Estoque)', icon: '📦', color: '#1E40AF', category: 'Comercial', needsBank: true },
   { id: 'frete', label: 'Frete / Logística', icon: '🚚', color: '#F97316', category: 'Comercial', needsBank: true },
   { id: 'transportadora_cliente', label: 'Transportadora (Exempt)', icon: '🚢', color: '#6366F1', category: 'Comercial', needsBank: false },
+  { id: 'freteiro', label: 'Freteiro', icon: '🚛', color: '#0EA5E9', category: 'Comercial', needsBank: false },
 
   // OPERACIONAL (Opex / Despesas)
   { id: 'prestador', label: 'Prestador de Serviço', icon: '👷', color: '#8B5CF6', category: 'Operacional', needsBank: true },
@@ -38,15 +43,17 @@ const AGENT_TYPES = [
   { id: 'seguradora', label: 'Seguradora', icon: '🛡️', category: 'Financeiro', color: '#14B8A6', needsBank: true },
 ];
 
-export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
+const AGENTS_BASE = '/finance/agents';
+
+export default function AgentForm({ onSuccess, initialData, agentsBasePath = AGENTS_BASE }: AgentFormProps) {
   const supabase = useSupabase();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const isSubmitting = useRef(false);
   const [financialClasses, setFinancialClasses] = useState<{ id: string; name: string }[]>([]);
-  const t = useTranslations('Agents');
+  const t = useTranslations('Dashboard.Agents');
   const tCommon = useTranslations('Dashboard.Common');
-  const { alert, confirm } = useUI();
+  const { alert, confirm, toast } = useUI();
 
   // Style definitions
   const labelStyle: React.CSSProperties = {
@@ -196,9 +203,9 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
       const { error } = await supabase.from('agent_documents').delete().eq('id', id);
       if (error) throw error;
       fetchAgentDocuments();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting doc:', err);
-      alert('Erro', 'Não foi possível excluir o documento.', 'danger');
+      toast.error('Não foi possível excluir o documento.');
     }
   };
 
@@ -298,8 +305,8 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
         }
       }
 
-      await alert('Sucesso', 'Arquivo enviado com sucesso!', 'success');
-    } catch (error: any) {
+      toast.success('Arquivo enviado com sucesso!');
+    } catch (error: unknown) {
       console.error('Upload error:', error);
       await alert(
         'Erro no envio',
@@ -402,7 +409,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
           .limit(100);
 
         if (potentialMatches) {
-          const match = potentialMatches.find((a: any) => normalizeString(a.name) === normalizedCurrent);
+          const match = potentialMatches.find((a: { id: string; name: string }) => normalizeString(a.name) === normalizedCurrent);
           if (match) {
             setDuplicateWarning({ id: match.id, name: match.name, type: 'similar' });
             return;
@@ -452,7 +459,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
             .eq('id', first.id);
 
           if (rest.length > 0) {
-            const idsToDelete = rest.map((d: any) => d.id);
+            const idsToDelete = rest.map((d: { id: string }) => d.id);
             await supabase.from('agent_documents')
               .delete()
               .in('id', idsToDelete);
@@ -582,7 +589,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
 
           await alert(tCommon('success'), t('form.messages.syncWarning'), 'success');
           if (onSuccess) onSuccess();
-          else router.push('/dashboard/agents');
+          else router.push(agentsBasePath);
           return;
         }
 
@@ -593,17 +600,13 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
         await syncHistoricalDocs(finalAgentId);
       }
 
-      await alert(tCommon('success'), t('form.messages.successSave'), 'success');
+      toast.success(t('form.messages.successSave'));
       if (onSuccess) onSuccess();
-      else router.push('/dashboard/agents');
+      else router.push(agentsBasePath);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Save error detailed:', error);
-      await alert(
-        tCommon('error'),
-        t('form.messages.errorSave') + ': ' + (error.message || 'Verifique se as colunas no banco de dados estão sincronizadas.'),
-        'danger'
-      );
+      toast.error(t('form.messages.errorSave') + ': ' + getErrorMessage(error));
     } finally {
       setLoading(false);
       isSubmitting.current = false;
@@ -625,12 +628,12 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
       const { error } = await supabase.from('agents').delete().eq('id', initialData.id);
       if (error) throw error;
 
-      await alert(tCommon('success'), t('form.messages.successDelete'), 'success');
+      toast.success(t('form.messages.successDelete'));
       if (onSuccess) onSuccess();
-      else router.push('/dashboard/agents');
-    } catch (error: any) {
+      else router.push(agentsBasePath);
+    } catch (error: unknown) {
       console.error('Delete error:', error);
-      await alert(tCommon('error'), t('form.messages.errorDelete') + ': ' + error.message, 'danger');
+      toast.error(t('form.messages.errorDelete') + ': ' + getErrorMessage(error));
     } finally {
       setLoading(false);
       isSubmitting.current = false;
@@ -638,86 +641,29 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
   };
 
   return (
-    <div
-      style={{
-        background: '#ffffff',
-        borderRadius: '16px',
-        border: '1px solid #e2e8f0',
-        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
-        position: 'relative',
-      }}
-    >
-      {/* Header - Glassmorphism Sticky */}
+    <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+      <PageHeader
+        title={initialData ? 'Editar Agente' : 'Novo Agente'}
+        description="Gerencie parceiros de negócio, fornecedores e clientes"
+        icon="🤝"
+        breadcrumbs={[
+          { label: 'FINANCEIRO', href: '/finance', color: '#059669' },
+          { label: 'AGENTES', href: agentsBasePath, color: '#059669' },
+          { label: initialData ? 'EDITAR' : 'NOVO', color: '#059669' },
+        ]}
+        moduleColor="#059669"
+      />
+
       <div
         style={{
-          padding: '28px 40px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.4)',
-          background: 'rgba(255, 255, 255, 0.65)',
-          backdropFilter: 'blur(24px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(200%)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          display: 'flex',
-          flexDirection: 'column',
-          borderTopLeftRadius: '16px',
-          borderTopRightRadius: '16px',
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.04)',
+          background: '#ffffff',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+          position: 'relative',
+          marginTop: '24px',
         }}
       >
-        <div
-          style={{
-            fontSize: '11px',
-            fontWeight: '800',
-            textTransform: 'uppercase',
-            letterSpacing: '0.12em',
-            color: '#94a3b8',
-            marginBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Link
-            href="/dashboard/registration"
-            style={{
-              textDecoration: 'none',
-              color: 'inherit',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'color 0.2s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#3B82F6')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
-          >
-            <span>📋 CADASTRO</span>
-          </Link>
-          <span style={{ color: '#cbd5e1', fontWeight: '400' }}>›</span>
-          <Link
-            href="/dashboard/agents"
-            style={{
-              textDecoration: 'none',
-              color: '#3B82F6',
-              transition: 'opacity 0.2s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >
-            <span>AGENTE</span>
-          </Link>
-        </div>
-        <h2 style={{
-          fontSize: '32px',
-          fontWeight: '900',
-          color: '#1e293b',
-          margin: 0,
-          letterSpacing: '-0.03em'
-        }}>
-          {initialData ? t('editTitle') : t('addNew')}
-        </h2>
-      </div>
-
       <form onSubmit={handleSubmit} style={{ padding: '28px 32px' }}>
         {/* 1. SELEÇÃO DE TIPOS (TOP) */}
         <div style={{ marginBottom: '32px' }}>
@@ -785,7 +731,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                             textAlign: 'left'
                           }}
                         >
-                          {type.label}
+                          {t(`form.types_list.${type.id}`)}
                         </span>
                         {isSelected && (
                           <span
@@ -863,8 +809,8 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
             <label style={{ ...labelStyle, marginBottom: '12px' }}>⚖️ Identificação Jurídica</label>
             <div style={{ display: 'flex', gap: '8px' }}>
               {[
-                { id: 'individual', label: 'Pessoa Física', icon: '👤' },
-                { id: 'entity', label: 'Pessoa Jurídica', icon: '🏢' },
+                { id: 'individual', label: t('form.person_types.individual') || 'Pessoa Física', icon: '👤' },
+                { id: 'entity', label: t('form.person_types.entity') || 'Pessoa Jurídica', icon: '🏢' },
               ].map(item => (
                 <button
                   key={item.id}
@@ -913,7 +859,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
           <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr', gap: '20px', marginBottom: '24px' }}>
             <div>
               <label style={labelStyle}>
-                Nome Fantasia / Apelido <span style={{ color: '#ef4444' }}>*</span>
+                {t('form.name')} <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
                 required
@@ -925,7 +871,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
               />
             </div>
             <div>
-              <label style={labelStyle}>Razão Social / Legal Name</label>
+              <label style={labelStyle}>{t('form.legalName')}</label>
               <input
                 type="text"
                 value={formData.legal_name}
@@ -1019,7 +965,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
             }}
           >
             <div>
-              <label style={labelStyle}>Pessoa de Contato</label>
+              <label style={labelStyle}>{t('form.contact_person')}</label>
               <input
                 type="text"
                 value={formData.contact_person}
@@ -1029,7 +975,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
               />
             </div>
             <div>
-              <label style={labelStyle}>Email</label>
+              <label style={labelStyle}>{t('form.email')}</label>
               <input
                 type="email"
                 value={formData.email}
@@ -1039,7 +985,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
               />
             </div>
             <div>
-              <label style={labelStyle}>Telefone</label>
+              <label style={labelStyle}>{t('form.phone')}</label>
               <input
                 type="text"
                 value={formData.phone}
@@ -1049,7 +995,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
               />
             </div>
             <div>
-              <label style={labelStyle}>Site / Website</label>
+              <label style={labelStyle}>{t('form.website')}</label>
               <input
                 type="url"
                 value={formData.website}
@@ -1061,11 +1007,11 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
           </div>
 
           <div>
-            <label style={labelStyle}>Endereço Completo</label>
+            <label style={labelStyle}>{t('form.address_full')}</label>
             <div style={{ display: 'grid', gap: '10px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '4px' }}>{isBR ? 'CEP' : 'ZIP Code'}</label>
+                  <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '4px' }}>{t('form.zip')}</label>
                   <input
                     type="text"
                     placeholder={isBR ? '00000-000' : '33130'}
@@ -1081,7 +1027,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                   />
                 </div>
                 <div>
-                  <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '4px' }}>Logradouro / Street</label>
+                  <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '4px' }}>{t('form.street')}</label>
                   <input
                     type="text"
                     placeholder="Rua / Street Address"
@@ -1091,7 +1037,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                   />
                 </div>
                 <div>
-                  <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '4px' }}>Cidade</label>
+                  <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '4px' }}>{t('form.city')}</label>
                   <input
                     type="text"
                     placeholder="Cidade"
@@ -1101,7 +1047,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                   />
                 </div>
                 <div>
-                  <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '4px' }}>{isBR ? 'UF' : 'State'}</label>
+                  <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '4px' }}>{t('form.state')}</label>
                   <input
                     type="text"
                     placeholder={isBR ? 'UF' : 'State'}
@@ -1141,7 +1087,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 gap: '8px',
               }}
             >
-              🏦 Dados Bancários e Fiscais para Pagamentos
+              🏦 {t('form.banking_title')}
               <span style={{
                 marginLeft: '12px',
                 fontSize: '9px',
@@ -1152,7 +1098,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 border: '1px solid #fde047',
                 fontWeight: '800'
               }}>
-                Natureza: Saídas / Pagamentos
+                {t('form.nature_payment')}
               </span>
             </div>
 
@@ -1195,7 +1141,12 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                     <div>
                       <label style={labelStyle}>{t('form.attach')} {regulatoryDocName}</label>
                       <input type="file" onChange={e => handleFileUpload(e, 'regulatory_doc_url')} style={{ fontSize: '11px' }} />
-                      {formData.regulatory_doc_url && <div style={{ fontSize: '10px', color: '#10B981', marginTop: '4px' }}>✅ {t('form.alreadyAttached')}</div>}
+                      {formData.regulatory_doc_url && (
+                        <div style={{ fontSize: '10px', color: '#10B981', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span>✅ {t('form.alreadyAttached')}</span>
+                          <a href={formData.regulatory_doc_url} target="_blank" rel="noreferrer" style={{ color: '#0369a1', textDecoration: 'underline', fontWeight: 500 }}>{t('form.viewDocument')}</a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1270,7 +1221,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
               }}
             >
               <div>
-                <label style={labelStyle}>{isBR ? 'Agência' : 'Routing #'}</label>
+                <label style={labelStyle}>{t('form.routing')}</label>
                 <input
                   type="text"
                   value={formData.bank_routing_number}
@@ -1286,21 +1237,14 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                         .is('deleted_at', null)
                         .maybeSingle()
                         .then(({ data }: { data: any }) => {
-                          if (data) {
+                          const nameFromDb = data?.name?.trim();
+                          const bankName = nameFromDb || (!isBR ? lookupBankByRouting(value) : null);
+                          if (bankName) {
                             setFormData(prev => ({
                               ...prev,
                               bank_routing_number: value,
-                              bank_name: data.name,
+                              bank_name: bankName,
                             }));
-                          } else if (!isBR) {
-                            const bankName = lookupBankByRouting(value);
-                            if (bankName) {
-                              setFormData(prev => ({
-                                ...prev,
-                                bank_routing_number: value,
-                                bank_name: bankName,
-                              }));
-                            }
                           }
                         })
                         .finally(() => setLoading(false));
@@ -1312,7 +1256,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 />
               </div>
               <div>
-                <label style={labelStyle}>{isBR ? 'Conta' : 'Account #'}</label>
+                <label style={labelStyle}>{t('form.account')}</label>
                 <input
                   type="text"
                   value={formData.bank_account_number}
@@ -1323,7 +1267,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Tipo de Conta</label>
+                <label style={labelStyle}>{t('form.account_type')}</label>
                 <select
                   value={formData.bank_account_type}
                   onChange={e =>
@@ -1339,7 +1283,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
               <div>
-                <label style={labelStyle}>Nome do Banco</label>
+                <label style={labelStyle}>{t('form.bank_name')}</label>
                 <input
                   type="text"
                   value={formData.bank_name}
@@ -1352,7 +1296,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Titular da Conta</label>
+                <label style={labelStyle}>{t('form.bank_holder')}</label>
                 <input
                   type="text"
                   value={formData.bank_holder_name}
@@ -1459,12 +1403,12 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
             {/* Alternative payment methods */}
             <div style={{ padding: '20px', background: 'rgba(254, 240, 138, 0.4)', borderRadius: '12px', border: '1px solid #fde047' }}>
               <div style={{ fontSize: '11px', color: '#854d0e', marginBottom: '16px', fontWeight: '800', textTransform: 'uppercase' }}>
-                Métodos Alternativos
+                {t('form.alt_payment')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 {isBR && (
                   <div>
-                    <label style={labelStyle}>Chave PIX</label>
+                    <label style={labelStyle}>{t('form.pix')}</label>
                     <input
                       type="text"
                       value={formData.pix_key}
@@ -1475,7 +1419,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 )}
                 {isUS && (
                   <div>
-                    <label style={labelStyle}>Zelle Email/Phone</label>
+                    <label style={labelStyle}>{t('form.zelle')}</label>
                     <input
                       type="text"
                       value={formData.zelle_email}
@@ -1485,7 +1429,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                   </div>
                 )}
                 <div>
-                  <label style={labelStyle}>PayPal Email</label>
+                  <label style={labelStyle}>{t('form.paypal')}</label>
                   <input
                     type="email"
                     value={formData.paypal_email}
@@ -1498,7 +1442,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
               {isBR && (
                 <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px dashed #fde047' }}>
                   <div style={{ fontSize: '11px', color: '#854d0e', marginBottom: '12px', fontWeight: '800', textTransform: 'uppercase' }}>
-                    🌐 Wire Internacional (SWIFT/IBAN)
+                    {t('form.wire_intl')}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
@@ -1516,8 +1460,8 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
           </div>
         )}
 
-        {/* Commercial Settings (Clients & Forwarders) */}
-        {(isCustomer || isExemptForwarder) && (
+        {/* Parâmetros Financeiros & Comissão - somente para Cliente */}
+        {isCustomer && (
           <div
             style={{
               padding: '24px',
@@ -1539,23 +1483,23 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 gap: '8px',
               }}
             >
-              💼 {t('form.commercialSettings')}
+              💼 {t('form.financial_params')}
               <span style={{
                 marginLeft: '12px',
                 fontSize: '9px',
-                background: isCustomer ? '#dcfce7' : '#e0f2fe',
-                color: isCustomer ? '#15803d' : '#0369a1',
+                background: '#dcfce7',
+                color: '#15803d',
                 padding: '4px 10px',
                 borderRadius: '6px',
-                border: isCustomer ? '1px solid #86efac' : '1px solid #7dd3fc',
+                border: '1px solid #86efac',
                 fontWeight: '800'
               }}>
-                {t('form.profile')}: {isCustomer ? t('form.types_list.cliente') : t('form.types_list.transportadora_cliente')}
+                {t('form.profile')}: {t('form.types_list.cliente')}
               </span>
             </div>
 
             {/* Resale Certificate Section - Only for Customers */}
-            {isUS && isCustomer && (
+            {isUS && (
               <div style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid #bbf7d0' }}>
                 <label style={{ ...labelStyle, color: '#059669', marginBottom: '12px' }}>
                   🏷️ Status do Resale Certificate (RC): <span style={{ color: '#ef4444' }}>*</span>
@@ -1616,9 +1560,14 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                       />
                     </div>
                     <div>
-                      <label style={labelStyle}>{t('form.attach')} {isExemptForwarder ? 'DR-14' : 'RC'}</label>
+                      <label style={labelStyle}>{t('form.attach')} RC</label>
                       <input type="file" onChange={e => handleFileUpload(e, 'resale_certificate_url')} style={{ fontSize: '11px' }} />
-                      {formData.resale_certificate_url && <div style={{ fontSize: '10px', color: '#10B981', marginTop: '4px' }}>✅ {t('form.alreadyAttached')}</div>}
+                      {formData.resale_certificate_url && (
+                        <div style={{ fontSize: '10px', color: '#10B981', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span>✅ {t('form.alreadyAttached')}</span>
+                          <a href={formData.resale_certificate_url} target="_blank" rel="noreferrer" style={{ color: '#0369a1', textDecoration: 'underline', fontWeight: 500 }}>{t('form.viewDocument')}</a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1740,178 +1689,185 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
               </div>
             </div>
           </div>
-        )}
+        )
+        }
 
         {/* DR-14 Section (Only for Forwarding Agents) */}
-        {isExemptForwarder && (
-          <div
-            style={{
-              padding: '24px',
-              background: '#e0f2fe',
-              borderRadius: '16px',
-              border: '1px solid #7dd3fc',
-              marginBottom: '28px',
-            }}
-          >
+        {
+          isExemptForwarder && (
             <div
               style={{
-                fontSize: '11px',
-                color: '#64748b',
-                marginBottom: '16px',
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
+                padding: '24px',
+                background: '#e0f2fe',
+                borderRadius: '16px',
+                border: '1px solid #7dd3fc',
+                marginBottom: '28px',
               }}
             >
-              💼 Configurações Comerciais
-              <span style={{
-                marginLeft: '12px',
-                fontSize: '9px',
-                background: '#e0f2fe',
-                color: '#0369a1',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                border: '1px solid #7dd3fc',
-                fontWeight: '800'
-              }}>
-                Perfil: Transportadora
-              </span>
-            </div>
-
-            {/* DR-14 Section - Only for Exempt Forwarders */}
-            {isUS && isExemptForwarder && (
-              <div style={{ marginBottom: '24px', paddingBottom: '24px' }}>
-                <label style={{ ...labelStyle, color: '#0369a1', marginBottom: '12px' }}>
-                  🏷️ Status do Forwarding Agent (DR-14): <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                  {[
-                    { id: 'pending', label: t('form.status.pending'), icon: '⚠️', color: '#f59e0b', bg: '#fffbeb' },
-                    { id: 'received', label: t('form.status.received'), icon: '✅', color: '#10B981', bg: '#f0fdf4' },
-                    { id: 'waived', label: t('form.status.waived'), icon: '⏭️', color: '#64748b', bg: '#f8fafc' },
-                  ].map(status => (
-                    <button
-                      key={status.id}
-                      type="button"
-                      onClick={() =>
-                        setFormData(prev => ({
-                          ...prev,
-                          resale_certificate_status: status.id,
-                          resale_certificate: status.id !== 'received' ? '' : prev.resale_certificate,
-                        }))
-                      }
-                      style={{
-                        flex: 1,
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: formData.resale_certificate_status === status.id ? `2px solid ${status.color}` : '1px solid #dbeafe',
-                        background: formData.resale_certificate_status === status.id ? status.bg : '#fff',
-                        color: formData.resale_certificate_status === status.id ? status.color : '#64748b',
-                        fontSize: '13px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {status.icon} {status.label}
-                    </button>
-                  ))}
-                </div>
-
-                {formData.resale_certificate_status === 'received' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.5fr 1fr', gap: '16px' }}>
-                    <div>
-                      <label style={labelStyle}>Número do DR-14</label>
-                      <input
-                        type="text"
-                        value={formData.resale_certificate}
-                        onChange={e => setFormData(prev => ({ ...prev, resale_certificate: e.target.value }))}
-                        style={{ ...inputStyle, borderColor: '#7dd3fc' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Ano/Exercício</label>
-                      <input
-                        type="number"
-                        value={formData.resale_certificate_expiry_year}
-                        onChange={e => setFormData(prev => ({ ...prev, resale_certificate_expiry_year: parseInt(e.target.value) }))}
-                        style={{ ...inputStyle, borderColor: '#7dd3fc' }}
-                        placeholder="Ex: 2026"
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Anexar DR-14</label>
-                      <input type="file" onChange={e => handleFileUpload(e, 'resale_certificate_url')} style={{ fontSize: '11px' }} />
-                      {formData.resale_certificate_url && <div style={{ fontSize: '10px', color: '#10B981', marginTop: '4px' }}>✅ Já anexado</div>}
-                    </div>
-                  </div>
-                )}
-
-                {/* Historico de Documentos (DR-14) */}
-                {historicalDocs.filter(d => d.document_type === 'Forwarding Agent (DR-14)').length > 0 && (
-                  <div style={{ marginTop: '16px', borderTop: '1px dashed #7dd3fc', paddingTop: '12px' }}>
-                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', marginBottom: '8px', textTransform: 'uppercase' }}>
-                      📋 Histórico de Certificados (DR-14)
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {historicalDocs.filter(d => d.document_type === 'Forwarding Agent (DR-14)').map((doc, idx) => {
-                        const isCurrent = doc.file_url === formData.resale_certificate_url;
-                        return (
-                          <div key={doc.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
-                            <a
-                              href={doc.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                fontSize: '11px',
-                                padding: '4px 10px',
-                                background: '#fff',
-                                border: isCurrent ? '2px solid #0ea5e9' : '1px solid #7dd3fc',
-                                borderRadius: '6px 0 0 6px',
-                                color: '#0369a1',
-                                textDecoration: 'none',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                marginRight: '-1px'
-
-                              }}
-                            >
-                              📅 {doc.reference_year} {isCurrent && <span style={{ fontSize: '9px', background: '#0ea5e9', color: '#fff', padding: '1px 4px', borderRadius: '3px' }}>Atual</span>}
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteHistoricalDoc(doc.id, `DR-14 ${doc.reference_year}`)}
-                              style={{
-                                padding: '4px 8px',
-                                background: '#fef2f2',
-                                borderTop: isCurrent ? '2px solid #0ea5e9' : '1px solid #7dd3fc',
-                                borderRight: isCurrent ? '2px solid #0ea5e9' : '1px solid #7dd3fc',
-                                borderBottom: isCurrent ? '2px solid #0ea5e9' : '1px solid #7dd3fc',
-                                borderLeft: 'none',
-                                borderRadius: '0 6px 6px 0',
-                                color: '#ef4444',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                              title="Excluir do histórico"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: '#64748b',
+                  marginBottom: '16px',
+                  fontWeight: '700',
+                  textTransform: 'uppercase',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                📄 {t('form.fiscal_docs_title')}
+                <span style={{
+                  marginLeft: '12px',
+                  fontSize: '9px',
+                  background: '#e0f2fe',
+                  color: '#0369a1',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #7dd3fc',
+                  fontWeight: '800'
+                }}>
+                  {t('form.profile')}: {t('form.types_list.transportadora_cliente')}
+                </span>
               </div>
-            )}
-          </div>
-        )}
+
+              {/* DR-14 Section - Only for Exempt Forwarders */}
+              {isUS && isExemptForwarder && (
+                <div style={{ marginBottom: '24px', paddingBottom: '24px' }}>
+                  <label style={{ ...labelStyle, color: '#0369a1', marginBottom: '12px' }}>
+                    🏷️ Status do Forwarding Agent (DR-14): <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    {[
+                      { id: 'pending', label: t('form.status.pending'), icon: '⚠️', color: '#f59e0b', bg: '#fffbeb' },
+                      { id: 'received', label: t('form.status.received'), icon: '✅', color: '#10B981', bg: '#f0fdf4' },
+                      { id: 'waived', label: t('form.status.waived'), icon: '⏭️', color: '#64748b', bg: '#f8fafc' },
+                    ].map(status => (
+                      <button
+                        key={status.id}
+                        type="button"
+                        onClick={() =>
+                          setFormData(prev => ({
+                            ...prev,
+                            resale_certificate_status: status.id,
+                            resale_certificate: status.id !== 'received' ? '' : prev.resale_certificate,
+                          }))
+                        }
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          borderRadius: '8px',
+                          border: formData.resale_certificate_status === status.id ? `2px solid ${status.color}` : '1px solid #dbeafe',
+                          background: formData.resale_certificate_status === status.id ? status.bg : '#fff',
+                          color: formData.resale_certificate_status === status.id ? status.color : '#64748b',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {status.icon} {status.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {formData.resale_certificate_status === 'received' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.5fr 1fr', gap: '16px' }}>
+                      <div>
+                        <label style={labelStyle}>Número do DR-14</label>
+                        <input
+                          type="text"
+                          value={formData.resale_certificate}
+                          onChange={e => setFormData(prev => ({ ...prev, resale_certificate: e.target.value }))}
+                          style={{ ...inputStyle, borderColor: '#7dd3fc' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Ano/Exercício</label>
+                        <input
+                          type="number"
+                          value={formData.resale_certificate_expiry_year}
+                          onChange={e => setFormData(prev => ({ ...prev, resale_certificate_expiry_year: parseInt(e.target.value) }))}
+                          style={{ ...inputStyle, borderColor: '#7dd3fc' }}
+                          placeholder="Ex: 2026"
+                        />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Anexar DR-14</label>
+                        <input type="file" onChange={e => handleFileUpload(e, 'resale_certificate_url')} style={{ fontSize: '11px' }} />
+                        {formData.resale_certificate_url && (
+                          <div style={{ fontSize: '10px', color: '#10B981', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span>✅ {t('form.alreadyAttached')}</span>
+                            <a href={formData.resale_certificate_url} target="_blank" rel="noreferrer" style={{ color: '#0369a1', textDecoration: 'underline', fontWeight: 500 }}>{t('form.viewDocument')}</a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Historico de Documentos (DR-14) */}
+                  {historicalDocs.filter(d => d.document_type === 'Forwarding Agent (DR-14)').length > 0 && (
+                    <div style={{ marginTop: '16px', borderTop: '1px dashed #7dd3fc', paddingTop: '12px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', marginBottom: '8px', textTransform: 'uppercase' }}>
+                        📋 Histórico de Certificados (DR-14)
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {historicalDocs.filter(d => d.document_type === 'Forwarding Agent (DR-14)').map((doc, idx) => {
+                          const isCurrent = doc.file_url === formData.resale_certificate_url;
+                          return (
+                            <div key={doc.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
+                              <a
+                                href={doc.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '4px 10px',
+                                  background: '#fff',
+                                  border: isCurrent ? '2px solid #0ea5e9' : '1px solid #7dd3fc',
+                                  borderRadius: '6px 0 0 6px',
+                                  color: '#0369a1',
+                                  textDecoration: 'none',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  marginRight: '-1px'
+
+                                }}
+                              >
+                                📅 {doc.reference_year} {isCurrent && <span style={{ fontSize: '9px', background: '#0ea5e9', color: '#fff', padding: '1px 4px', borderRadius: '3px' }}>Atual</span>}
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteHistoricalDoc(doc.id, `DR-14 ${doc.reference_year}`)}
+                                style={{
+                                  padding: '4px 8px',
+                                  background: '#fef2f2',
+                                  borderTop: isCurrent ? '2px solid #0ea5e9' : '1px solid #7dd3fc',
+                                  borderRight: isCurrent ? '2px solid #0ea5e9' : '1px solid #7dd3fc',
+                                  borderBottom: isCurrent ? '2px solid #0ea5e9' : '1px solid #7dd3fc',
+                                  borderLeft: 'none',
+                                  borderRadius: '0 6px 6px 0',
+                                  color: '#ef4444',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                                title="Excluir do histórico"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
         <div
           style={{
@@ -1938,7 +1894,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 fontWeight: '500',
               }}
             >
-              Cancelar
+              {tCommon('cancel')}
             </button>
             <button
               type="submit"
@@ -1956,7 +1912,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 boxShadow: '0 2px 8px rgba(59,130,246,0.3)',
               }}
             >
-              {loading ? 'Salvando...' : '✓ Salvar Agente'}
+              {loading ? tCommon('loading') : (initialData ? `✓ ${t('form.saveEdit')}` : `✓ ${t('form.save')}`)}
             </button>
           </div>
 
@@ -1983,11 +1939,12 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
                 e.currentTarget.style.background = '#fff';
               }}
             >
-              🗑️ Excluir Agente
+              🗑️ {tCommon('delete')}
             </button>
           )}
         </div>
       </form>
+    </div>
     </div>
   );
 }

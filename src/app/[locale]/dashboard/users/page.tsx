@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import { useUI } from '@/context/UIContext';
 import AddUserModal from '@/components/dashboard/AddUserModal';
 import ColumnFilter from '@/components/ui/ColumnFilter';
+import PageHeader from '@/components/ui/PageHeader';
+import { getErrorMessage } from '@/lib/errors';
 
 type UserProfile = {
   id: string;
@@ -14,15 +16,23 @@ type UserProfile = {
   last_name: string | null;
   full_name: string | null;
   role: string;
+  role_v2?: string | null;
+  access_profile_id?: string | null;
   address: string | null;
+  phone_country_code?: string | null;
+  phone_number?: string | null;
   created_at: string;
   deleted_at: string | null;
   job_title?: string;
+  access_profile?: {
+    name: string;
+    is_system_profile: boolean;
+  };
 };
 
 export default function UsersPage() {
   const t = useTranslations('Dashboard.Users');
-  const { alert, confirm } = useUI();
+  const { alert, confirm, toast } = useUI();
   const supabase = useSupabase(); // Hook com instância única global
 
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -45,7 +55,12 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('profiles').select('*');
+      let query = supabase
+        .from('profiles')
+        .select(`
+          *,
+          access_profile:access_profiles(name, is_system_profile)
+        `);
 
       if (showDeleted) {
         query = query.not('deleted_at', 'is', null);
@@ -55,10 +70,19 @@ export default function UsersPage() {
 
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
-      setUsers(data || []);
-    } catch (error: any) {
+      type ProfileRow = Omit<UserProfile, 'role' | 'access_profile'> & {
+        access_profile?: { name: string; is_system_profile: boolean } | { name: string; is_system_profile: boolean }[];
+        role_v2?: string | null;
+      };
+      const normalized = (data || []).map((user: ProfileRow) => ({
+        ...user,
+        role: (Array.isArray(user.access_profile) ? user.access_profile[0]?.name : user.access_profile?.name) || user.role_v2 || 'Sem perfil',
+        access_profile: Array.isArray(user.access_profile) ? user.access_profile[0] : user.access_profile,
+      }));
+      setUsers(normalized);
+    } catch (error: unknown) {
       console.error('Fetch Error:', error);
-      await alert('Erro', error.message, 'danger');
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -90,8 +114,8 @@ export default function UsersPage() {
         'success'
       );
       fetchUsers();
-    } catch (error: any) {
-      await alert('Erro', 'Erro ao alterar status: ' + error.message, 'danger');
+    } catch (error: unknown) {
+      toast.error('Erro ao alterar status: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -151,65 +175,55 @@ export default function UsersPage() {
   });
 
   return (
-    <div style={{ padding: '0px', minHeight: '100vh', background: 'transparent' }}>
-      {/* Breadcrumb */}
-      <div style={{ marginBottom: '24px', fontSize: '14px', color: '#64748b' }}>
-        📋 <a href="/dashboard/registration" style={{ fontWeight: '600', color: '#3b82f6', textDecoration: 'none', cursor: 'pointer' }}>Cadastro</a> › Usuários
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <div>
-          <h1 style={{ fontSize: '36px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>
-            👥 {t('title') || 'Gestão de Usuários'}
-          </h1>
-          <p style={{ color: '#64748b', marginTop: '8px' }}>
-            Administre os membros da sua equipe e permissões
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => {
-              setShowDeleted(!showDeleted);
-            }}
-            style={{
-              background: showDeleted ? '#64748b' : 'white',
-              color: showDeleted ? 'white' : '#64748b',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '14px 24px',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            {showDeleted ? 'Ver Ativos' : 'Ver Inativos'}
-          </button>
-
-          <button
-            onClick={() => {
-              setSelectedUser(null);
-              setIsModalOpen(true);
-            }}
-            style={{
-              background: '#3B82F6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '14px 28px',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)',
-            }}
-          >
-            + Convidar Usuário
-          </button>
-        </div>
-      </div>
+    <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+      <PageHeader
+        title="Gestão de Usuários"
+        description="Administre os membros da sua equipe e permissões"
+        icon="👥"
+        breadcrumbs={[
+          { label: 'SEGURANÇA', href: '/dashboard/security', color: '#dc2626' },
+          { label: 'USUÁRIOS', color: '#dc2626' },
+        ]}
+        moduleColor="#dc2626"
+        actions={
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => setShowDeleted(!showDeleted)}
+              style={{
+                background: showDeleted ? '#64748b' : 'white',
+                color: showDeleted ? 'white' : '#64748b',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '14px 24px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+            >
+              {showDeleted ? 'Ver Ativos' : 'Ver Inativos'}
+            </button>
+            <button
+              onClick={() => {
+                setSelectedUser(null);
+                setIsModalOpen(true);
+              }}
+              style={{
+                background: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px 28px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 8px 20px rgba(220, 38, 38, 0.3)',
+              }}
+            >
+              + Convidar Usuário
+            </button>
+          </div>
+        }
+      />
 
       {/* Search and Clear Filters */}
       <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -265,7 +279,7 @@ export default function UsersPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
           <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 100 }}>
             <tr>
-              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', position: 'relative', overflow: 'visible', width: '30%' }}>
+              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', position: 'relative', overflow: 'visible', width: '22%' }}>
                 <ColumnFilter
                   label="Nome"
                   options={uniqueNames}
@@ -273,7 +287,7 @@ export default function UsersPage() {
                   onChange={setSelectedNames}
                 />
               </th>
-              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', position: 'relative', overflow: 'visible', width: '30%' }}>
+              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', position: 'relative', overflow: 'visible', width: '25%' }}>
                 <ColumnFilter
                   label="Email"
                   options={uniqueEmails}
@@ -281,7 +295,10 @@ export default function UsersPage() {
                   onChange={setSelectedEmails}
                 />
               </th>
-              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', position: 'relative', overflow: 'visible', width: '25%' }}>
+              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '18%' }}>
+                Telefone
+              </th>
+              <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', position: 'relative', overflow: 'visible', width: '20%' }}>
                 <ColumnFilter
                   label="Perfil"
                   options={uniqueRoles}
@@ -296,9 +313,9 @@ export default function UsersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} style={{ padding: '40px', textAlign: 'center' }}>Carregando usuários...</td></tr>
+              <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center' }}>Carregando usuários...</td></tr>
             ) : filteredUsers.length === 0 ? (
-              <tr><td colSpan={4} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Nenhum usuário encontrado</td></tr>
+              <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Nenhum usuário encontrado</td></tr>
             ) : (
               filteredUsers.map((user) => (
                 <tr key={user.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.03)' }}>
@@ -308,8 +325,18 @@ export default function UsersPage() {
                   <td style={{ padding: '18px 24px', fontSize: '14px', color: '#64748b' }}>
                     {user.email}
                   </td>
+                  <td style={{ padding: '18px 24px', fontSize: '13px', color: '#475569' }}>
+                    {user.phone_number ? (
+                      <span>{user.phone_country_code} {user.phone_number}</span>
+                    ) : (
+                      <span style={{ color: '#cbd5e1' }}>---</span>
+                    )}
+                  </td>
                   <td style={{ padding: '18px 24px' }}>
-                    <span style={roleTagStyle(user.role)}>{user.role}</span>
+                    <span style={roleTagStyle(user.role, user.access_profile?.is_system_profile)}>
+                      {user.role}
+                      {user.access_profile?.is_system_profile && ' 🔒'}
+                    </span>
                   </td>
                   <td style={{ padding: '18px 24px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -348,13 +375,21 @@ export default function UsersPage() {
   );
 }
 
-const roleTagStyle = (role: string) =>
+const roleTagStyle = (role: string, isSystemProfile?: boolean) =>
   ({
     padding: '4px 10px',
     borderRadius: '6px',
     fontSize: '11px',
     fontWeight: '700',
     textTransform: 'uppercase',
-    background: role.includes('admin') ? '#fef2f2' : '#f0f9ff',
-    color: role.includes('admin') ? '#ef4444' : '#0369a1',
+    background: isSystemProfile 
+      ? '#fef2f2' 
+      : role.toLowerCase().includes('admin') || role.toLowerCase().includes('administrador')
+      ? '#fef2f2'
+      : '#f0f9ff',
+    color: isSystemProfile
+      ? '#dc2626'
+      : role.toLowerCase().includes('admin') || role.toLowerCase().includes('administrador')
+      ? '#ef4444'
+      : '#0369a1',
   }) as any;

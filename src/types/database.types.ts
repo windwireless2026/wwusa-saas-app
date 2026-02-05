@@ -15,6 +15,7 @@ export type Updates<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Update'];
 
 // Specific table types (for convenience)
+// Note: DbCompany, DbAccessProfile, DbAccessProfilePermission omitted until supabase.ts is regenerated with companies/access_profiles/access_profile_permissions
 export type DbProfile = Tables<'profiles'>;
 export type DbInventory = Tables<'inventory'>;
 export type DbProductCatalog = Tables<'product_catalog'>;
@@ -36,5 +37,4 @@ export type UpdateProductCatalog = Updates<'product_catalog'>;
 
 // Enums
 export type UserRole = Database['public']['Enums']['user_role'];
-export type InventoryStatus = Database['public']['Enums']['inventory_status'];
-export type TrackingMethod = Database['public']['Enums']['tracking_method'];
+export type PermissionLevel = 'none' | 'read' | 'write';

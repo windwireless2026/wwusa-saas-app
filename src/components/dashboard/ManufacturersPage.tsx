@@ -7,6 +7,8 @@ import { useUI } from '@/context/UIContext';
 import AddManufacturerModal from './AddManufacturerModal';
 import ColumnFilter from '@/components/ui/ColumnFilter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import PageHeader from '@/components/ui/PageHeader';
+import { getErrorMessage } from '@/lib/errors';
 
 interface Manufacturer {
   id: string;
@@ -20,7 +22,7 @@ export default function ManufacturersPage() {
   const supabase = useSupabase();
   const t = useTranslations('Dashboard.Registration.manufacturers');
   const tReg = useTranslations('Dashboard.Registration');
-  const { alert, confirm } = useUI();
+  const { alert, confirm, toast } = useUI();
   const queryClient = useQueryClient();
 
   // State
@@ -45,8 +47,11 @@ export default function ManufacturersPage() {
         query = query.is('deleted_at', null);
       }
       const { data, error } = await query;
-      if (error) throw error;
-      return data as Manufacturer[];
+      if (error) {
+        console.error('ManufacturersPage fetch error:', error?.message || error?.code || error);
+        return [];
+      }
+      return (data || []) as Manufacturer[];
     },
   });
 
@@ -61,10 +66,10 @@ export default function ManufacturersPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manufacturers'] });
-      alert('Sucesso', 'Fabricante restaurado com sucesso!', 'success');
+      toast.success('Fabricante restaurado com sucesso!');
     },
-    onError: (error: any) => {
-      alert('Erro', 'Erro ao restaurar: ' + error.message, 'danger');
+    onError: (error: unknown) => {
+      toast.error('Erro ao restaurar: ' + getErrorMessage(error));
     },
   });
 
@@ -80,8 +85,8 @@ export default function ManufacturersPage() {
       queryClient.invalidateQueries({ queryKey: ['manufacturers'] });
       alert(tReg('success'), tReg('deleteSuccess'), 'success');
     },
-    onError: (error: any) => {
-      alert(tReg('error'), error.message, 'danger');
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 
@@ -146,61 +151,55 @@ export default function ManufacturersPage() {
     search !== '';
 
   return (
-    <div style={{ padding: '0px', minHeight: '100vh', background: 'transparent' }}>
-      {/* Breadcrumb */}
-      <div style={{ marginBottom: '24px', fontSize: '14px', color: '#64748b' }}>
-        📋 <a href="/dashboard/registration" style={{ fontWeight: '600', color: '#3b82f6', textDecoration: 'none', cursor: 'pointer' }}>Cadastro</a> › Fabricantes
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <div>
-          <h1 style={{ fontSize: '36px', fontWeight: '800', margin: 0 }}>
-            🏭 {t('title')}
-          </h1>
-          <p style={{ color: '#64748b', marginTop: '8px' }}>
-            {t('subtitle')}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => setShowDeleted(!showDeleted)}
-            style={{
-              background: showDeleted ? '#64748b' : 'white',
-              color: showDeleted ? 'white' : '#64748b',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '14px 24px',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            {showDeleted ? 'Ver Ativos' : 'Ver Lixeira'}
-          </button>
-          <button
-            onClick={() => {
-              setEditingManufacturer(null);
-              setIsAddModalOpen(true);
-            }}
-            style={{
-              background: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '14px 28px',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)',
-            }}
-          >
-            {t('addNew')}
-          </button>
-        </div>
-      </div>
+    <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+      <PageHeader
+        title="Fabricantes"
+        description="Gestão de marcas e fabricantes de produtos"
+        icon="🏭"
+        breadcrumbs={[
+          { label: 'OPERAÇÕES', href: '/operations', color: '#7c3aed' },
+          { label: 'FABRICANTES', color: '#7c3aed' },
+        ]}
+        moduleColor="#7c3aed"
+        actions={
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => setShowDeleted(!showDeleted)}
+              style={{
+                background: showDeleted ? '#64748b' : 'white',
+                color: showDeleted ? 'white' : '#64748b',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '14px 24px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+            >
+              {showDeleted ? 'Ver Ativos' : 'Ver Lixeira'}
+            </button>
+            <button
+              onClick={() => {
+                setEditingManufacturer(null);
+                setIsAddModalOpen(true);
+              }}
+              style={{
+                background: '#7c3aed',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px 28px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 8px 20px rgba(124, 58, 237, 0.3)',
+              }}
+            >
+              {t('addNew')}
+            </button>
+          </div>
+        }
+      />
 
       {/* Search and Clear Filters */}
       <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>

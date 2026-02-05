@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useUI } from '@/context/UIContext';
 import ColumnFilter from '@/components/ui/ColumnFilter';
 import { useTranslations } from 'next-intl';
+import PageHeader from '@/components/ui/PageHeader';
+import { getErrorMessage } from '@/lib/errors';
 
 type Estimate = {
     id: string;
@@ -16,13 +18,15 @@ type Estimate = {
     ship_date: string | null;
     total: number;
     status: string;
+    stock_location_id?: string;
+    stock_locations?: { name: string };
     created_at: string;
 };
 
 export default function EstimatesPage() {
     const t = useTranslations('Dashboard.Common');
     const supabase = useSupabase();
-    const { alert, confirm } = useUI();
+    const { alert, confirm, toast } = useUI();
     const [estimates, setEstimates] = useState<Estimate[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -44,7 +48,7 @@ export default function EstimatesPage() {
         setLoading(true);
         const { data, error } = await supabase
             .from('estimates')
-            .select('*, customer:customer_id(name)')
+            .select('*, customer:customer_id(name), stock_locations(name)')
             .is('deleted_at', null)
             .order('estimate_number', { ascending: false });
 
@@ -110,79 +114,26 @@ export default function EstimatesPage() {
 
     const handleApprove = async (id: string) => {
         const confirmed = await confirm(
-            'Aprovar Estimate',
-            'Deseja aprovar este estimate e gerar uma Order? Isso criará um novo registro de venda.'
+            'Confirmar Aprovação',
+            'Deseja aprovar este estimate e gerar uma Order? Isso mudará o status e criará o registro financeiro.'
         );
 
         if (!confirmed) return;
 
         try {
-            // 1. Fetch full estimate data
-            const { data: estimate, error: fetchError } = await supabase
-                .from('estimates')
-                .select('*, items:estimate_items(*)')
-                .eq('id', id)
-                .single();
+            // Chamada atômica via RPC (Database Function)
+            const { data: newOrderId, error } = await supabase.rpc('convert_estimate_to_order', {
+                target_estimate_id: id
+            });
 
-            if (fetchError || !estimate) throw new Error('Erro ao carregar dados do estimate.');
+            if (error) throw error;
 
-            // 2. Create Sales Order
-            const { data: order, error: orderError } = await supabase
-                .from('sales_orders')
-                .insert({
-                    estimate_id: estimate.id,
-                    customer_id: estimate.customer_id,
-                    salesperson_id: estimate.salesperson_id,
-                    commission_percent: estimate.commission_percent,
-                    deduct_discount_from_commission: estimate.deduct_discount_from_commission,
-                    subtotal: estimate.subtotal,
-                    discount_amount: estimate.discount_amount,
-                    total: estimate.total,
-                    status: 'approved',
-                    ship_to_name: estimate.ship_to_name,
-                    ship_to_address: estimate.ship_to_address,
-                    ship_to_city: estimate.ship_to_city,
-                    ship_to_state: estimate.ship_to_state,
-                    ship_to_zip: estimate.ship_to_zip,
-                    ship_to_country: estimate.ship_to_country,
-                    ship_to_phone: estimate.ship_to_phone,
-                    notes: estimate.notes,
-                    shipping_notes: estimate.customer_notes
-                })
-                .select()
-                .single();
-
-            if (orderError) throw orderError;
-
-            // 3. Create Items
-            const orderItems = estimate.items.map((item: any, index: number) => ({
-                order_id: order.id,
-                model: item.model,
-                capacity: item.capacity,
-                grade: item.grade,
-                description: item.description,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
-                cost_price: item.cost_price,
-                margin_percent: item.margin_percent,
-                sort_order: index
-            }));
-
-            const { error: itemsError } = await supabase
-                .from('sales_order_items')
-                .insert(orderItems);
-
-            if (itemsError) throw itemsError;
-
-            // 4. Update Status
-            await supabase.from('estimates').update({ status: 'converted' }).eq('id', id);
-
-            await alert('Sucesso', 'Estimate aprovado e gerado Order!', 'success');
+            toast.success('Estimate aprovado e gerado Order!');
             fetchEstimates();
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
-            await alert('Erro', 'Falha ao aprovar estimate: ' + error.message, 'danger');
+            toast.error('Falha ao aprovar estimate: ' + getErrorMessage(error));
         }
     };
 
@@ -244,32 +195,21 @@ export default function EstimatesPage() {
         searchTerm !== '';
 
     return (
-        <div style={{ padding: '0', minHeight: '100vh' }}>
-            {/* Header */}
-            <div style={{ marginBottom: '32px' }}>
-                <div style={{
-                    fontSize: '11px',
-                    fontWeight: '900',
-                    color: '#7c3aed',
-                    textTransform: 'uppercase',
-                    marginBottom: '12px',
-                    letterSpacing: '0.1em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                }}>
-                    <Link href="/dashboard/comercial" style={{ padding: '4px 10px', background: '#f5f3ff', borderRadius: '6px', textDecoration: 'none', color: '#7c3aed' }}>COMERCIAL</Link>
-                    <span style={{ opacity: 0.3 }}>›</span>
-                    <span>ESTIMATES</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h1 style={{ fontSize: '42px', fontWeight: '950', color: '#0f172a', letterSpacing: '-0.04em', margin: 0 }}>
-                        📋 Estimates
-                    </h1>
+        <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+            <PageHeader
+                title="Estimates"
+                description="Gestão de cotações e propostas comerciais"
+                icon="📋"
+                breadcrumbs={[
+                    { label: 'COMERCIAL', href: '/dashboard/comercial', color: '#0891b2' },
+                    { label: 'ESTIMATES', color: '#0891b2' },
+                ]}
+                moduleColor="#0891b2"
+                actions={
                     <Link
                         href="/dashboard/comercial/estimates/new"
                         style={{
-                            background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                            background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
                             color: 'white',
                             border: 'none',
                             borderRadius: '14px',
@@ -277,7 +217,7 @@ export default function EstimatesPage() {
                             fontSize: '14px',
                             fontWeight: '800',
                             cursor: 'pointer',
-                            boxShadow: '0 8px 24px rgba(124, 58, 237, 0.35)',
+                            boxShadow: '0 8px 24px rgba(8, 145, 178, 0.35)',
                             textDecoration: 'none',
                             display: 'flex',
                             alignItems: 'center',
@@ -286,8 +226,8 @@ export default function EstimatesPage() {
                     >
                         + Novo Estimate
                     </Link>
-                </div>
-            </div>
+                }
+            />
 
             {/* Stats Mini Cards */}
             <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
@@ -429,6 +369,7 @@ export default function EstimatesPage() {
                                         onChange={setSelectedValues}
                                     />
                                 </th>
+                                <th style={{ padding: '16px 20px', textAlign: 'left', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>LOCAL</th>
                                 <th style={{ padding: '16px 20px', textAlign: 'center', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Ações</th>
                             </tr>
                         </thead>
@@ -472,6 +413,15 @@ export default function EstimatesPage() {
                                     </td>
                                     <td style={{ padding: '16px 20px', textAlign: 'right', fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
                                         ${(est.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </td>
+                                    <td style={{ padding: '16px 20px' }}>
+                                        {est.stock_locations ? (
+                                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#7c3aed', background: '#f5f3ff', padding: '4px 8px', borderRadius: '6px' }}>
+                                                📍 {est.stock_locations.name}
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>—</span>
+                                        )}
                                     </td>
                                     <td style={{ padding: '16px 20px', textAlign: 'center' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>

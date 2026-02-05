@@ -4,12 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useRouter } from 'next/navigation';
+import { getErrorMessage } from '@/lib/errors';
 
 export default function LoginPage() {
   const supabase = useSupabase();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,8 +33,8 @@ export default function LoginPage() {
         router.push('/dashboard');
         router.refresh();
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Erro ao fazer login');
     } finally {
       setLoading(false);
     }
@@ -126,16 +128,16 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="glass-panel"
+              autoComplete="email"
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                color: 'white',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid var(--border-subtle)',
+                color: '#0f172a',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
                 outline: 'none',
                 borderRadius: '8px',
-                fontSize: '14px',
+                fontSize: '16px',
               }}
               placeholder="seu@email.com"
             />
@@ -154,24 +156,58 @@ export default function LoginPage() {
             >
               Senha
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className="glass-panel"
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                color: 'white',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid var(--border-subtle)',
-                outline: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-              }}
-              placeholder="••••••••"
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                style={{
+                  width: '100%',
+                  padding: '12px 44px 12px 16px',
+                  color: '#0f172a',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  outline: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                }}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  padding: '4px',
+                  cursor: 'pointer',
+                  color: '#475569',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {showPassword ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <button

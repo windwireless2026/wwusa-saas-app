@@ -5,6 +5,8 @@ import { useSupabase } from '@/hooks/useSupabase';
 import { useUI } from '@/context/UIContext';
 import AddCostCenterModal from './AddCostCenterModal';
 import ColumnFilter from '@/components/ui/ColumnFilter';
+import PageHeader from '@/components/ui/PageHeader';
+import { getErrorMessage } from '@/lib/errors';
 
 interface CostCenter {
     id: string;
@@ -24,7 +26,7 @@ export default function CostCentersPage() {
     const [editingItem, setEditingItem] = useState<CostCenter | null>(null);
     const [showDeleted, setShowDeleted] = useState(false);
     const [search, setSearch] = useState('');
-    const { alert, confirm } = useUI();
+    const { alert, confirm, toast } = useUI();
 
     // Excel-like column filters
     const [selectedNames, setSelectedNames] = useState<string[]>([]);
@@ -72,9 +74,9 @@ export default function CostCentersPage() {
 
             if (error) throw error;
             await fetchData();
-            await alert('Sucesso', 'Centro de custo excluído com sucesso!', 'success');
-        } catch (error: any) {
-            await alert('Erro', error.message, 'danger');
+            toast.success('Centro de custo excluído com sucesso!');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -97,9 +99,9 @@ export default function CostCentersPage() {
 
             if (error) throw error;
             await fetchData();
-            await alert('Sucesso', 'Centro de custo restaurado!', 'success');
-        } catch (error: any) {
-            await alert('Erro', error.message, 'danger');
+            toast.success('Centro de custo restaurado!');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -153,61 +155,55 @@ export default function CostCentersPage() {
         search !== '';
 
     return (
-        <div style={{ padding: '0px' }}>
-            {/* Breadcrumb */}
-            <div style={{ marginBottom: '24px', fontSize: '14px', color: '#64748b' }}>
-                📋 <a href="/dashboard/registration" style={{ fontWeight: '600', color: '#3b82f6', textDecoration: 'none' }}>Cadastro</a> › Administrativo › Centros de Custo
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-                <div>
-                    <h1 style={{ fontSize: '36px', fontWeight: '800', margin: 0 }}>
-                        💰 Centros de Custo
-                    </h1>
-                    <p style={{ color: '#64748b', marginTop: '8px' }}>
-                        Gerencie as divisões financeiras e departamentos da empresa.
-                    </p>
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <button
-                        onClick={() => setShowDeleted(!showDeleted)}
-                        style={{
-                            background: showDeleted ? '#64748b' : 'white',
-                            color: showDeleted ? 'white' : '#64748b',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '12px',
-                            padding: '14px 24px',
-                            fontSize: '14px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                        }}
-                    >
-                        {showDeleted ? 'Ver Ativos' : 'Ver Lixeira'}
-                    </button>
-                    <button
-                        onClick={() => {
-                            setEditingItem(null);
-                            setIsModalOpen(true);
-                        }}
-                        style={{
-                            background: '#3B82F6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '12px',
-                            padding: '14px 28px',
-                            fontSize: '14px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)',
-                        }}
-                    >
-                        + Novo Centro de Custo
-                    </button>
-                </div>
-            </div>
+        <div style={{ padding: '40px', minHeight: '100vh', background: '#f8fafc' }}>
+            <PageHeader
+                title="Centros de Custo"
+                description="Gerencie as divisões financeiras e departamentos da empresa"
+                icon="💼"
+                breadcrumbs={[
+                    { label: 'FINANCEIRO', href: '/finance', color: '#059669' },
+                    { label: 'CENTROS DE CUSTO', color: '#059669' },
+                ]}
+                moduleColor="#059669"
+                actions={
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <button
+                            onClick={() => setShowDeleted(!showDeleted)}
+                            style={{
+                                background: showDeleted ? '#64748b' : 'white',
+                                color: showDeleted ? 'white' : '#64748b',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '12px',
+                                padding: '14px 24px',
+                                fontSize: '14px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            {showDeleted ? 'Ver Ativos' : 'Ver Lixeira'}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setEditingItem(null);
+                                setIsModalOpen(true);
+                            }}
+                            style={{
+                                background: '#059669',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                padding: '14px 28px',
+                                fontSize: '14px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                boxShadow: '0 8px 20px rgba(5, 150, 105, 0.3)',
+                            }}
+                        >
+                            + Novo Centro de Custo
+                        </button>
+                    </div>
+                }
+            />
 
             {/* Toolbar */}
             <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>

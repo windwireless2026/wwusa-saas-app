@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
+import PageHeader from '@/components/ui/PageHeader';
 import { useTranslations } from 'next-intl';
 
 type InventoryItem = {
@@ -9,6 +10,13 @@ type InventoryItem = {
     model: string;
     price: number;
     status: string;
+    location_id: string | null;
+    location?: {
+        name: string;
+        include_in_avg_cost: boolean;
+        include_in_inventory_valuation: boolean;
+        is_wind_stock: boolean;
+    };
     created_at: string;
 };
 
@@ -16,20 +24,13 @@ export default function OperationsDashboard() {
     const supabase = useSupabase();
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [reservedItems, setReservedItems] = useState<any[]>([]);
+    const [locations, setLocations] = useState<any[]>([]);
+    const [selectedLocation, setSelectedLocation] = useState<string>('all');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-
-            // 1. Fetch Inventory (Physical Stock)
-            const { data: inventoryData, error: inventoryError } = await supabase
-                .from('inventory')
-                .select('id, model, price, status, created_at')
-                .is('deleted_at', null);
-
-            if (inventoryError) console.error('Error fetching inventory:', inventoryError);
-            else setItems(inventoryData || []);
 
             // 2. Fetch "Reserved" items (From Converted Estimates)
             const { data: reservedData, error: reservedError } = await supabase
@@ -40,6 +41,31 @@ export default function OperationsDashboard() {
             if (reservedError) console.error('Error fetching reserved items:', reservedError);
             else setReservedItems(reservedData || []);
 
+            // 3. Fetch Locations
+            const { data: locationData } = await supabase
+                .from('stock_locations')
+                .select('id, name, is_wind_stock')
+                .is('deleted_at', null)
+                .order('name');
+
+            if (locationData) {
+                setLocations(locationData);
+                // Set default location to the first one marked as is_wind_stock
+                const defaultLoc = locationData.find((loc: { is_wind_stock: boolean; id: string }) => loc.is_wind_stock);
+                if (defaultLoc) {
+                    setSelectedLocation(defaultLoc.id);
+                }
+            }
+
+            // Updated fetch inventory to include location info
+            const { data: inventoryDataPlus, error: invError } = await supabase
+                .from('inventory')
+                .select('id, model, price, status, created_at, location_id, location:stock_locations(name, include_in_avg_cost, include_in_inventory_valuation, is_wind_stock)')
+                .is('deleted_at', null);
+
+            if (invError) console.error('Inventory error:', invError);
+            else setItems(inventoryDataPlus as any || []);
+
             setLoading(false);
         };
 
@@ -47,28 +73,50 @@ export default function OperationsDashboard() {
     }, [supabase]);
 
     const stats = useMemo(() => {
-        // Physical Inventory
-        const physicalAvailable = items.filter(i => i.status === 'Available');
-        const physicalSold = items.filter(i => i.status === 'Sold').length;
+        // Filter by selected location if not 'all'
+        const filteredPhysical = selectedLocation === 'all'
+            ? items
+            : items.filter(i => i.location_id === selectedLocation);
 
-        const totalValue = physicalAvailable.reduce((sum, i) => sum + (i.price || 0), 0);
-        const totalPhysicalUnits = physicalAvailable.length;
+        // Physical Inventory
+        // If 'all' is selected, respect the 'include_in_inventory_valuation' flag for the total value AND unit count
+        const physicalAvailableForStats = filteredPhysical.filter(i =>
+            i.status === 'Available' &&
+            (selectedLocation !== 'all' || (i.location?.include_in_inventory_valuation ?? true))
+        );
+
+        const physicalAvailableAll = filteredPhysical.filter(i => i.status === 'Available');
+        const physicalSold = filteredPhysical.filter(i => i.status === 'Sold').length;
+
+        const totalValue = physicalAvailableForStats.reduce((sum, i) => sum + (i.price || 0), 0);
+        const totalPhysicalUnits = physicalAvailableForStats.length;
 
         // Demand (Reserved)
         const reservedUnits = reservedItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
-        // Net Available (Physical - Reserved)
+        // Net Available (Adjusted Available based on what we consider in stock)
         const netAvailable = Math.max(0, totalPhysicalUnits - reservedUnits);
 
         // Group by model for the breakdown
-        const byModelData = physicalAvailable.reduce((acc, item) => {
+        const byModelData = physicalAvailableAll.reduce((acc, item) => {
             if (!acc[item.model]) {
-                acc[item.model] = { qty: 0, totalPrice: 0 };
+                acc[item.model] = { qty: 0, totalPrice: 0, avgPriceQty: 0, avgPriceTotal: 0, statsQty: 0 };
             }
             acc[item.model].qty += 1;
             acc[item.model].totalPrice += item.price || 0;
+
+            // Count for stats only if allowed
+            if (selectedLocation !== 'all' || (item.location?.include_in_inventory_valuation ?? true)) {
+                acc[item.model].statsQty += 1;
+            }
+
+            // Respect avg cost flag for the average calculation if in 'all' view
+            if (selectedLocation !== 'all' || (item.location?.include_in_avg_cost ?? true)) {
+                acc[item.model].avgPriceQty += 1;
+                acc[item.model].avgPriceTotal += item.price || 0;
+            }
             return acc;
-        }, {} as Record<string, { qty: number; totalPrice: number }>);
+        }, {} as Record<string, { qty: number; totalPrice: number; avgPriceQty: number; avgPriceTotal: number; statsQty: number }>);
 
         // Reserved per Model map
         const reservedByModel = reservedItems.reduce((acc, item) => {
@@ -80,23 +128,24 @@ export default function OperationsDashboard() {
             .map(([model, data]) => ({
                 model,
                 qty: data.qty,
+                statsQty: data.statsQty,
                 reserved: reservedByModel[model] || 0,
-                available: Math.max(0, data.qty - (reservedByModel[model] || 0)),
+                available: Math.max(0, data.statsQty - (reservedByModel[model] || 0)),
                 totalPrice: data.totalPrice,
-                avgPrice: data.qty > 0 ? data.totalPrice / data.qty : 0
+                avgPrice: data.avgPriceQty > 0 ? data.avgPriceTotal / data.avgPriceQty : (data.qty > 0 ? data.totalPrice / data.qty : 0)
             }))
-            .sort((a, b) => b.qty - a.qty);
+            .sort((a, b) => b.statsQty - a.statsQty);
 
         return {
             totalValue,
-            totalUnits: totalPhysicalUnits, // This is PHYSICAL available
-            netAvailable, // This is Adjusted Available
+            totalUnits: totalPhysicalUnits,
+            netAvailable,
             reservedUnits,
             soldUnits: physicalSold,
             modelCount: Object.keys(byModelData).length,
             byModel
         };
-    }, [items, reservedItems]);
+    }, [items, reservedItems, selectedLocation]);
 
     const cardStyle = {
         background: 'white',
@@ -123,33 +172,45 @@ export default function OperationsDashboard() {
     };
 
     return (
-        <div style={{ padding: '32px', minHeight: '100vh' }}>
-            <div style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                    <div style={{
-                        fontSize: '11px',
-                        fontWeight: '900',
-                        color: '#7c3aed',
-                        textTransform: 'uppercase',
-                        marginBottom: '12px',
-                        letterSpacing: '0.1em',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                    }}>
-                        <span style={{ padding: '4px 10px', background: '#f5f3ff', borderRadius: '6px' }}>OPERAÇÕES</span>
-                        <span style={{ opacity: 0.3 }}>›</span>
-                        <span>INTELIGÊNCIA DE ESTOQUE</span>
+        <div style={{ padding: '40px', minHeight: '100vh' }}>
+            <PageHeader
+                title="Painel Operacional"
+                description="Inteligência de estoque e operações"
+                icon="⚡"
+                breadcrumbs={[
+                    { label: 'OPERAÇÕES', href: '/dashboard/operations', color: '#7c3aed' },
+                    { label: 'INTELIGÊNCIA DE ESTOQUE', color: '#7c3aed' },
+                ]}
+                moduleColor="#7c3aed"
+                actions={
+                    <div style={{ position: 'relative' }}>
+                        <select
+                            value={selectedLocation}
+                            onChange={(e) => setSelectedLocation(e.target.value)}
+                            style={{
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                border: '1px solid #e2e8f0',
+                                background: '#fff',
+                                color: '#0f172a',
+                                fontWeight: '700',
+                                fontSize: '13px',
+                                appearance: 'none',
+                                cursor: 'pointer',
+                                minWidth: '220px',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                                outline: 'none'
+                            }}
+                        >
+                            <option value="all">📍 Todos os Locais</option>
+                            {locations.map(loc => (
+                                <option key={loc.id} value={loc.id}>📍 {loc.name}</option>
+                            ))}
+                        </select>
+                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.4, fontSize: '10px' }}>▼</div>
                     </div>
-                    <h1 style={{ fontSize: '42px', fontWeight: '950', color: '#0f172a', letterSpacing: '-0.04em', margin: 0 }}>
-                        Painel Operacional
-                    </h1>
-                </div>
-                <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', background: '#f8fafc', padding: '8px 16px', borderRadius: '10px' }}>
-                    {/* Hydration safe update time */}
-                    Atualizado hoje
-                </div>
-            </div>
+                }
+            />
 
             {loading ? (
                 <div style={{ color: '#94a3b8', fontWeight: '600', textAlign: 'center', padding: '100px' }}>Carregando dados operacionais...</div>
@@ -198,7 +259,7 @@ export default function OperationsDashboard() {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-                        <div style={{ ...cardStyle, padding: '32px' }}>
+                        <div style={{ ...cardStyle, padding: '40px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                                 <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
                                     <div style={{ width: '32px', height: '32px', background: '#f5f3ff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📱</div>
@@ -209,23 +270,26 @@ export default function OperationsDashboard() {
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '32px' }}>
                                 {stats.byModel.map((item) => {
-                                    const percentage = (item.qty / stats.totalUnits) * 100;
+                                    const percentage = (item.statsQty / stats.totalUnits) * 100;
                                     return (
                                         <div key={item.model} style={{ background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                                 <span style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>{item.model}</span>
                                                 <div style={{ textAlign: 'right' }}>
                                                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '4px' }}>
-                                                        <span style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a' }}>{item.qty}</span>
+                                                        <span style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a' }}>{item.statsQty}</span>
                                                         <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>UN</span>
                                                     </div>
+                                                    {item.qty !== item.statsQty && (
+                                                        <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>({item.qty} total)</div>
+                                                    )}
                                                 </div>
                                             </div>
 
                                             {/* Availability Split Bar */}
                                             <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', display: 'flex', marginBottom: '12px' }}>
-                                                <div style={{ width: `${(item.available / item.qty) * 100}%`, background: '#10b981', height: '100%' }} />
-                                                <div style={{ width: `${(item.reserved / item.qty) * 100}%`, background: '#f59e0b', height: '100%' }} />
+                                                <div style={{ width: `${(item.available / Math.max(1, item.statsQty)) * 100}%`, background: '#10b981', height: '100%' }} />
+                                                <div style={{ width: `${(Math.min(item.statsQty, item.reserved) / Math.max(1, item.statsQty)) * 100}%`, background: '#f59e0b', height: '100%' }} />
                                             </div>
 
                                             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
