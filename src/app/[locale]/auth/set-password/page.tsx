@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useRouter, useParams } from 'next/navigation';
 import { getErrorMessage } from '@/lib/errors';
@@ -34,7 +35,7 @@ export default function SetPasswordPage() {
     const WAIT_MS = 3500;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    const unsub = supabase.auth.onAuthStateChange((_event, session) => {
+    const unsub = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session) => {
       if (session?.user) {
         setSessionReady(true);
         unsub.data.subscription.unsubscribe();
