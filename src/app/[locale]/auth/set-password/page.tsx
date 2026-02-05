@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { AuthChangeEvent } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useRouter, useParams } from 'next/navigation';
 import { getErrorMessage } from '@/lib/errors';
@@ -35,20 +35,20 @@ export default function SetPasswordPage() {
     const WAIT_MS = 3500;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    const unsub = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session) => {
+    const unsub = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
         setSessionReady(true);
         unsub.data.subscription.unsubscribe();
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session?.user) {
         setSessionReady(true);
         return;
       }
       timeoutId = setTimeout(() => {
-        supabase.auth.getSession().then(({ data: { session: s2 } }) => {
+        supabase.auth.getSession().then(({ data: { session: s2 } }: { data: { session: Session | null } }) => {
           setSessionReady(true);
           if (!s2?.user) goLogin();
         });

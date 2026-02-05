@@ -28,8 +28,8 @@ type InventoryItem = {
     full_name: string | null;
     first_name: string | null;
     last_name: string | null;
-    email: string;
-  };
+    email?: string | null;
+  } | null;
   stock_locations?: { name: string | null; is_wind_stock?: boolean } | null;
 };
 

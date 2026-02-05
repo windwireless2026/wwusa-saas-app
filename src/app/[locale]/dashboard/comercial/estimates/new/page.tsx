@@ -217,7 +217,8 @@ export default function NewEstimatePage() {
             setShipToCountry(selectedCustomer.country || '');
             setShipToPhone(selectedCustomer.phone || '');
         } else if (deliveryType === 'forwarder' && (selectedFreteiro || selectedForwarder)) {
-            const shipSource = selectedFreteiro || selectedForwarder;
+            const shipSource = selectedFreteiro ?? selectedForwarder;
+            if (!shipSource) return;
             setShipToName(shipSource.name);
             setShipToAddress(shipSource.address_line1 || '');
             setShipToCity(shipSource.address_city || '');
@@ -249,6 +250,12 @@ export default function NewEstimatePage() {
         setForwarderId(id);
         const fw = allAgents.find(f => f.id === id);
         setSelectedForwarder(fw || null);
+    };
+
+    const handleFreteiroChange = (id: string) => {
+        setFreteiroId(id);
+        const fr = allAgents.find(f => f.id === id);
+        setSelectedFreteiro(fr || null);
     };
 
     const handleDeliveryTypeChange = (type: typeof deliveryType) => {

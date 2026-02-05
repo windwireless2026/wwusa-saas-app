@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { useRouter, useParams } from 'next/navigation';
 import Sidebar from '@/components/dashboard/Sidebar';
 import { useSupabase } from '@/hooks/useSupabase';
@@ -16,7 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setChecking(false);
       setHasSession(!!session);
       if (!session) {
