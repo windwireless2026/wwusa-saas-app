@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSupabase } from '@/hooks/useSupabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { getErrorMessage } from '@/lib/errors';
 
 export default function LoginPage() {
   const supabase = useSupabase();
   const router = useRouter();
+  const params = useParams();
+  const locale = (params?.locale as string) || 'pt';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -207,6 +209,19 @@ export default function LoginPage() {
                   </svg>
                 )}
               </button>
+            </div>
+            <div style={{ marginTop: '10px', textAlign: 'right' }}>
+              <Link
+                href={`/${locale}/auth/forgot-password`}
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#2563eb',
+                  textDecoration: 'none',
+                }}
+              >
+                Esqueci minha senha
+              </Link>
             </div>
           </div>
 
