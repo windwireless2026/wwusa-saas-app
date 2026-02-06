@@ -18,6 +18,7 @@ export default function SetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [sessionReady, setSessionReady] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
     if (!supabase?.auth) {
@@ -30,6 +31,12 @@ export default function SetPasswordPage() {
       router.replace(`/${locale}/auth/login`);
     };
 
+    const hasAuthParams =
+      typeof window !== 'undefined' &&
+      (window.location.hash.includes('access_token=') ||
+        window.location.hash.includes('type=invite') ||
+        new URLSearchParams(window.location.search).has('code'));
+
     // Dar tempo ao Supabase processar o token do convite (hash na URL) antes de redirecionar.
     // Nunca redirecionar antes de WAIT_MS; se onAuthStateChange disparar com sessão, mostramos o form na hora.
     const WAIT_MS = 3500;
@@ -37,6 +44,7 @@ export default function SetPasswordPage() {
 
     const unsub = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
+        setHasSession(true);
         setSessionReady(true);
         unsub.data.subscription.unsubscribe();
       }
@@ -44,13 +52,23 @@ export default function SetPasswordPage() {
 
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session?.user) {
+        setHasSession(true);
         setSessionReady(true);
         return;
       }
       timeoutId = setTimeout(() => {
         supabase.auth.getSession().then(({ data: { session: s2 } }: { data: { session: Session | null } }) => {
+          if (s2?.user) {
+            setHasSession(true);
+            setSessionReady(true);
+            return;
+          }
           setSessionReady(true);
-          if (!s2?.user) goLogin();
+          if (!hasAuthParams) {
+            goLogin();
+          } else {
+            setError('Convite expirado ou invalido. Solicite um novo convite.');
+          }
         });
       }, WAIT_MS);
     });
@@ -64,6 +82,10 @@ export default function SetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!hasSession) {
+      setError('Sessao expirada. Use o link do convite novamente.');
+      return;
+    }
     if (password.length < 6) {
       setError('A senha deve ter no mínimo 6 caracteres.');
       return;
