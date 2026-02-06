@@ -31,11 +31,47 @@ export default function SetPasswordPage() {
       router.replace(`/${locale}/auth/login`);
     };
 
-    const hasAuthParams =
-      typeof window !== 'undefined' &&
-      (window.location.hash.includes('access_token=') ||
-        window.location.hash.includes('type=invite') ||
-        new URLSearchParams(window.location.search).has('code'));
+    const hasAuthParams = typeof window !== 'undefined' && (() => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      return (
+        searchParams.has('code') ||
+        searchParams.has('access_token') ||
+        searchParams.has('refresh_token') ||
+        searchParams.get('type') === 'invite' ||
+        hashParams.has('access_token') ||
+        hashParams.has('refresh_token') ||
+        hashParams.get('type') === 'invite'
+      );
+    })();
+
+    const hydrateSessionFromUrl = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const code = searchParams.get('code');
+      const accessToken = hashParams.get('access_token') ?? searchParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token') ?? searchParams.get('refresh_token');
+
+      if (code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error && data.session?.user) {
+          setHasSession(true);
+          setSessionReady(true);
+        }
+        return;
+      }
+
+      if (accessToken && refreshToken) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (!error && data.session?.user) {
+          setHasSession(true);
+          setSessionReady(true);
+        }
+      }
+    };
 
     // Dar tempo ao Supabase processar o token do convite (hash na URL) antes de redirecionar.
     // Nunca redirecionar antes de WAIT_MS; se onAuthStateChange disparar com sessão, mostramos o form na hora.
@@ -48,6 +84,10 @@ export default function SetPasswordPage() {
         setSessionReady(true);
         unsub.data.subscription.unsubscribe();
       }
+    });
+
+    hydrateSessionFromUrl().catch(() => {
+      setSessionReady(true);
     });
 
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
